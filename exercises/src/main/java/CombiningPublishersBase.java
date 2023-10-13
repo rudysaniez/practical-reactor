@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
 
 /**
  * @author Stefan Dragisic
@@ -19,6 +20,8 @@ public class CombiningPublishersBase {
     AtomicBoolean writtenToFile = new AtomicBoolean(false);
     AtomicBoolean fileClosed = new AtomicBoolean(false);
     AtomicInteger committedTasksCounter = new AtomicInteger(0);
+
+    private static final Logger log = Logger.getLogger();
 
     public Mono<String> getCurrentUser() {
         return Mono.just("user123");

@@ -25,7 +25,7 @@ import java.util.function.Function;
  *
  * @author Stefan Dragisic
  */
-public class c6_CombiningPublishers extends CombiningPublishersBase {
+class c6_CombiningPublishers extends CombiningPublishersBase {
 
     /**
      * Goal of this exercise is to retrieve e-mail of currently logged-in user.
@@ -36,13 +36,13 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
      * You may only use `flatMap()` operator.
      */
     @Test
-    public void behold_flatmap() {
+    void behold_flatmap() {
         Hooks.enableContextLossTracking(); //used for testing - detects if you are cheating!
 
         //todo: feel free to change code as you need
         Mono<String> currentUserEmail = null;
-        Mono<String> currentUserMono = getCurrentUser();
-        getUserEmail(null);
+        currentUserEmail = getCurrentUser()
+                .flatMap(this::getUserEmail);
 
         //don't change below this line
         StepVerifier.create(currentUserEmail)
@@ -58,10 +58,10 @@ public class c6_CombiningPublishers extends CombiningPublishersBase {
      * - Is there a difference between Mono.flatMap() and Flux.flatMap()?
      */
     @Test
-    public void task_executor() {
+    void task_executor() {
         //todo: feel free to change code as you need
-        Flux<Void> tasks = null;
-        taskExecutor();
+        Flux<Void> tasks = taskExecutor()
+                .flatMap(m -> m);
 
         //don't change below this line
         StepVerifier.create(tasks)
