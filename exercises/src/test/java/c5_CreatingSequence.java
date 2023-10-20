@@ -18,15 +18,15 @@ import java.util.stream.Stream;
  * In this chapter we are going to cover fundamentals of how to create a sequence. At the end of this
  * chapter we will tackle more complex methods like generate, create, push, and we will meet them again in following
  * chapters like Sinks and Backpressure.
- *
+ * <p>
  * Read first:
- *
+ * <p>
  * https://projectreactor.io/docs/core/release/reference/#which.create
  * https://projectreactor.io/docs/core/release/reference/#producing
  * https://projectreactor.io/docs/core/release/reference/#_simple_ways_to_create_a_flux_or_mono_and_subscribe_to_it
- *
+ * <p>
  * Useful documentation:
- *
+ * <p>
  * https://projectreactor.io/docs/core/release/reference/#which-operator
  * https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Mono.html
  * https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Flux.html
@@ -44,8 +44,8 @@ class c5_CreatingSequence {
         Mono<String> valueIAlreadyHaveMono = Mono.just(valueIAlreadyHave); //todo: change this line only
 
         StepVerifier.create(valueIAlreadyHaveMono)
-                    .expectNext("value")
-                    .verifyComplete();
+                .expectNext("value")
+                .verifyComplete();
     }
 
     /**
@@ -57,7 +57,7 @@ class c5_CreatingSequence {
         Mono<String> potentiallyNullMono = Mono.justOrEmpty(potentiallyNull); //todo change this line only
 
         StepVerifier.create(potentiallyNullMono)
-                    .verifyComplete();
+                .verifyComplete();
     }
 
     /**
@@ -69,8 +69,8 @@ class c5_CreatingSequence {
         Mono<String> optionalMono = Mono.justOrEmpty(optionalValue); //todo: change this line only
 
         StepVerifier.create(optionalMono)
-                    .expectNext("optional")
-                    .verifyComplete();
+                .expectNext("optional")
+                .verifyComplete();
     }
 
     /**
@@ -87,8 +87,8 @@ class c5_CreatingSequence {
         Mono<Integer> callableCounterMono = Mono.fromCallable(callable); //todo: change this line only
 
         StepVerifier.create(callableCounterMono.repeat(2))
-                    .expectNext(1, 2, 3)
-                    .verifyComplete();
+                .expectNext(1, 2, 3)
+                .verifyComplete();
     }
 
     /**
@@ -104,8 +104,8 @@ class c5_CreatingSequence {
         Mono<Integer> futureCounterMono = Mono.fromFuture(completableFuture); //todo: change this line only
 
         StepVerifier.create(futureCounterMono)
-                    .expectNext(1)
-                    .verifyComplete();
+                .expectNext(1)
+                .verifyComplete();
 
         Assertions.assertEquals(1, futureCounter.get());
     }
@@ -123,7 +123,7 @@ class c5_CreatingSequence {
         Mono<Integer> runnableMono = Mono.fromRunnable(runnable); //todo: change this line only
 
         StepVerifier.create(runnableMono.repeat(2))
-                    .verifyComplete();
+                .verifyComplete();
 
         Assertions.assertEquals(3, runnableCounter.get());
     }
@@ -136,7 +136,7 @@ class c5_CreatingSequence {
         Mono<String> acknowledged = Mono.empty(); //todo: change this line only
 
         StepVerifier.create(acknowledged)
-                    .verifyComplete();
+                .verifyComplete();
     }
 
     /**
@@ -147,9 +147,9 @@ class c5_CreatingSequence {
         Mono<String> seen = Mono.never(); //todo: change this line only
 
         StepVerifier.create(seen.timeout(Duration.ofSeconds(5)))
-                    .expectSubscription()
-                    .expectNoEvent(Duration.ofSeconds(4))
-                    .verifyTimeout(Duration.ofSeconds(5));
+                .expectSubscription()
+                .expectNoEvent(Duration.ofSeconds(4))
+                .verifyTimeout(Duration.ofSeconds(5));
     }
 
     /**
@@ -160,8 +160,8 @@ class c5_CreatingSequence {
         Mono<String> trouble = Mono.error(new IllegalStateException()); //todo: change this line
 
         StepVerifier.create(trouble)
-                    .expectError(IllegalStateException.class)
-                    .verify();
+                .expectError(IllegalStateException.class)
+                .verify();
     }
 
     /**
@@ -173,8 +173,8 @@ class c5_CreatingSequence {
         Flux<Integer> arrayFlux = Flux.fromArray(array); //todo: change this line only
 
         StepVerifier.create(arrayFlux)
-                    .expectNext(1, 2, 3, 4, 5)
-                    .verifyComplete();
+                .expectNext(1, 2, 3, 4, 5)
+                .verifyComplete();
     }
 
     /**
@@ -186,9 +186,9 @@ class c5_CreatingSequence {
         Flux<String> listFlux = Flux.fromIterable(list); //todo: change this line only
 
         StepVerifier.create(listFlux.repeat(1))
-                    .expectSubscription()
-                    .expectNext("1", "2", "3", "4", "5", "1", "2", "3", "4", "5")
-                    .verifyComplete();
+                .expectSubscription()
+                .expectNext("1", "2", "3", "4", "5", "1", "2", "3", "4", "5")
+                .verifyComplete();
     }
 
     /**
@@ -200,8 +200,8 @@ class c5_CreatingSequence {
         Flux<String> streamFlux = Flux.fromStream(stream); //todo: change this line only
 
         StepVerifier.create(streamFlux)
-                    .expectNext("5", "6", "7", "8", "9")
-                    .verifyComplete();
+                .expectNext("5", "6", "7", "8", "9")
+                .verifyComplete();
     }
 
     /**
@@ -213,13 +213,13 @@ class c5_CreatingSequence {
 
         System.out.println("Interval: ");
         StepVerifier.create(interval.take(3).doOnNext(System.out::println))
-                    .expectSubscription()
-                    .expectNext(0L)
-                    .expectNoEvent(Duration.ofMillis(900))
-                    .expectNext(1L)
-                    .expectNoEvent(Duration.ofMillis(900))
-                    .expectNext(2L)
-                    .verifyComplete();
+                .expectSubscription()
+                .expectNext(0L)
+                .expectNoEvent(Duration.ofMillis(900))
+                .expectNext(1L)
+                .expectNoEvent(Duration.ofMillis(900))
+                .expectNext(2L)
+                .verifyComplete();
     }
 
     /**
@@ -231,8 +231,8 @@ class c5_CreatingSequence {
 
         System.out.println("Range: ");
         StepVerifier.create(range.doOnNext(System.out::println))
-                    .expectNext(-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5)
-                    .verifyComplete();
+                .expectNext(-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5)
+                .verifyComplete();
     }
 
     /**
@@ -243,18 +243,19 @@ class c5_CreatingSequence {
     void repeat() {
         AtomicInteger counter = new AtomicInteger(0);
         Callable<Integer> callable = counter::incrementAndGet;
-        Flux<Integer> repeated = Mono.fromCallable(callable).repeat(9); //todo: change this line
+        Flux<Integer> repeated = Mono.fromCallable(callable)
+                .repeat(9); //todo: change this line
 
         System.out.println("Repeat: ");
         StepVerifier.create(repeated.doOnNext(System.out::println))
-                    .expectNext(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
-                    .verifyComplete();
+                .expectNext(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+                .verifyComplete();
     }
 
     /**
      * Following example is just a basic usage of `generate,`create`,`push` sinks. We will learn how to use them in a
      * more complex scenarios when we tackle backpressure.
-     *
+     * <p>
      * Answer:
      * - What is difference between `generate` and `create`?
      * - What is difference between `create` and `push`?
@@ -265,26 +266,23 @@ class c5_CreatingSequence {
         AtomicInteger inc = new AtomicInteger(0);
         Flux<Integer> generateFlux = Flux.generate(sink -> {
             //todo: fix following code so it emits values from 0 to 5 and then completes
-            sink.next(inc.getAndIncrement());
-            if(inc.get() > 5)
+            if (inc.get() > 5)
                 sink.complete();
+            else
+                sink.next(inc.getAndIncrement());
         });
 
         StepVerifier.create(generateFlux)
-                .expectNext( 0, 1, 2, 3, 4, 5)
+                .expectNext(0, 1, 2, 3, 4, 5)
                 .verifyComplete();
 
         //------------------------------------------------------
 
         Flux<Integer> createFlux = Flux.create(sink -> {
             //todo: fix following code so it emits values from 0 to 5 and then completes
-            sink.next(0);
-            sink.next(1);
-            sink.next(2);
-            sink.next(3);
-            sink.next(4);
-            sink.next(5);
-            sink.complete();
+            Stream.iterate(0, n -> n <= 5, n -> n + 1)
+                    .forEachOrdered(sink::next);
+            sink.complete();;
         });
 
         StepVerifier.create(createFlux)
@@ -295,18 +293,14 @@ class c5_CreatingSequence {
 
         Flux<Integer> pushFlux = Flux.push(sink -> {
             //todo: fix following code so it emits values from 0 to 5 and then completes
-            sink.next(0);
-            sink.next(1);
-            sink.next(2);
-            sink.next(3);
-            sink.next(4);
-            sink.next(5);
-            sink.complete();
+            Stream.iterate(0, n -> n <= 5, n -> n + 1)
+                    .forEachOrdered(sink::next);
+            sink.complete();;
         });
 
         StepVerifier.create(pushFlux)
-                    .expectNext(0, 1, 2, 3, 4, 5)
-                    .verifyComplete();
+                .expectNext(0, 1, 2, 3, 4, 5)
+                .verifyComplete();
     }
 
     /**
@@ -324,9 +318,9 @@ class c5_CreatingSequence {
 
         //do not change code below
         StepVerifier.create(producer
-                                    .doOnNext(System.out::println)
-                                    .take(100))
-                    .expectNextCount(100)
-                    .verifyComplete();
+                        .doOnNext(System.out::println)
+                        .take(100))
+                .expectNextCount(100)
+                .verifyComplete();
     }
 }

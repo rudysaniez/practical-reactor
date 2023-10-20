@@ -1,12 +1,19 @@
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.FluxSink;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 /**
  * @author Stefan Dragisic
@@ -21,7 +28,7 @@ public class CombiningPublishersBase {
     AtomicBoolean fileClosed = new AtomicBoolean(false);
     AtomicInteger committedTasksCounter = new AtomicInteger(0);
 
-    private static final Logger log = Logger.getLogger();
+    static final Logger log = LoggerFactory.getLogger(CombiningPublishersBase.class);
 
     public Mono<String> getCurrentUser() {
         return Mono.just("user123");
@@ -35,7 +42,7 @@ public class CombiningPublishersBase {
         return Flux.range(1, 10)
                    //.delayElements(Duration.ofMillis(250))
                    .map(i -> Mono.<Void>fromRunnable(() -> {
-                       System.out.println("Executing task: #" + i);
+                       log.info(" > Executing task: #{}", i);
                        taskCounter.incrementAndGet();
                    }).subscribeOn(Schedulers.parallel()));
     }
@@ -80,6 +87,13 @@ public class CombiningPublishersBase {
                    .delaySubscription(Duration.ofMillis(100));
     }
 
+    public Flux<String> getStocksRpm() {
+        return Flux.range(20, 5)
+                .map(i -> i + "$")
+                .doOnNext(n -> System.out.println("(RPM) Got stock, price: " + n))
+                .delaySubscription(Duration.ofMillis(150));
+    }
+
     public Flux<String> getStocksGrpc() {
         return Flux.range(1, 5)
                    .map(i -> i + "$")
@@ -102,8 +116,14 @@ public class CombiningPublishersBase {
 
     public Flux<String> userSearchInput() {
         return Flux.just("r", "re", "rea", "reac", "reac", "react", "reacto", "reactor")
-                   .concatWith(Flux.just("reactive").delaySubscription(Duration.ofMillis(500)))
+                   .concatWith(Flux.just("reactive")
+                   .delaySubscription(Duration.ofMillis(500)))
                    .doOnNext(n -> System.out.println("Typed: " + n));
+    }
+
+    public Flux<String> userSimpleSearchInput() {
+        return Flux.just("r", "re", "rea", "reac", "reac", "react", "reacto", "reactor")
+                .doOnNext(n -> System.out.println("Typed: " + n));
     }
 
     public Mono<String> autoComplete(String word) {
@@ -154,9 +174,49 @@ public class CombiningPublishersBase {
                                  .subscribeOn(Schedulers.parallel()));
     }
 
+    /**
+     * @param count
+     * @return flow of {@link Mono<String>}
+     */
+    public Flux<Mono<String>> taskToExecuteByCreate(int count) {
+
+        return Flux.<Mono<String>>create(sink -> {
+                for(int i=1 ; i <= count ; i++) {
+                    final int val = i;
+                    sink.next(Mono.fromSupplier(() -> {
+                        System.out.println("Executing task: #" + val);
+                        return "task#" + val;}));
+                }
+            })
+            .delaySubscription(Duration.ofMillis(500))
+            .subscribeOn(Schedulers.parallel());
+    }
+
+    static ExecutorService myTaskExecutorService = Executors.newFixedThreadPool(4);
+
+    /**
+     * @param count
+     * @return flow of {@link Mono<String>}
+     */
+    public Flux<Mono<String>> taskToExecuteByCreateAsync(int count) {
+
+        return Flux.<Mono<String>>create(sink -> {
+                    for(int i=1 ; i <= count ; i++) {
+                        final int val = i;
+                        myTaskExecutorService.execute(() -> sink.next(Mono.just("task#"+val)));
+                    }
+                })
+                .delaySubscription(Duration.ofMillis(500))
+                .subscribeOn(Schedulers.parallel());
+    }
+
     public Mono<Void> commitTask(String taskId) {
         committedTasksCounter.incrementAndGet();
         return Mono.fromRunnable(() -> System.out.println("Task committed:" + taskId));
+    }
+
+    public Mono<Integer> commitTaskWithReturn(String taskId) {
+        return Mono.fromSupplier(() ->  committedTasksCounter.incrementAndGet());
     }
 
     public Flux<String> microsoftTitles() {
@@ -176,7 +236,7 @@ public class CombiningPublishersBase {
     public Flux<Chassis> carChassisProducer() {
         return Flux.range(1, 3)
                    .delayElements(Duration.ofMillis(350))
-                   .map(i -> new Chassis(UUID.randomUUID()))
+                   .map(ignored -> new Chassis(UUID.randomUUID()))
                    .doOnNext(c -> System.out.println("Chassis produced! #" + c.vin));
     }
 
@@ -220,6 +280,14 @@ public class CombiningPublishersBase {
         public Integer getSeqNum() {
             return seq;
         }
+
+        @Override
+        public String toString() {
+            return "Chassis{" +
+                    "seq=" + seq +
+                    ", vin=" + vin +
+                    '}';
+        }
     }
 
     public static class Engine {
@@ -236,6 +304,14 @@ public class CombiningPublishersBase {
         public Integer getSeqNum() {
             return seq;
         }
+
+        @Override
+        public String toString() {
+            return "Engine{" +
+                    "seq=" + seq +
+                    ", vin=" + vin +
+                    '}';
+        }
     }
 
     public static class Car {
@@ -246,6 +322,14 @@ public class CombiningPublishersBase {
         public Car(Chassis chassis, Engine engine) {
             this.chassis = chassis;
             this.engine = engine;
+        }
+
+        @Override
+        public String toString() {
+            return "Car{" +
+                    "chassis=" + chassis +
+                    ", engine=" + engine +
+                    '}';
         }
     }
 

@@ -57,23 +57,17 @@ class c4_LifecycleHooks extends LifecycleHooksBase {
         CopyOnWriteArrayList<String> hooksTriggered = new CopyOnWriteArrayList<>();
 
         Flux<Integer> temperatureFlux = room_temperature_service()
-                .doFirst(() -> hooksTriggered.add("before subscribe"))
-                ;
+                .doFirst(() -> hooksTriggered.add("before subscribe"));
 
         var finalFlux = temperatureFlux
                 .take(5)
-                .doOnSubscribe(s -> hooksTriggered.add("subscribe"))
-                .collectList()
-                .flatMapMany(data -> room_temperature_service())
-                .take(5)
-                .sort()
                 .doOnSubscribe(s -> hooksTriggered.add("subscribe"));
 
         StepVerifier.create(finalFlux)
                     .expectNextCount(5)
                     .verifyComplete();
 
-        Assertions.assertEquals(Arrays.asList("before subscribe", "subscribe", "subscribe"), hooksTriggered);
+        Assertions.assertEquals(Arrays.asList("before subscribe", "subscribe"), hooksTriggered);
     }
 
     /**
