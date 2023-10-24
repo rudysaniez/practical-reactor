@@ -265,7 +265,6 @@ class c5_CreatingSequence {
 
         AtomicInteger inc = new AtomicInteger(0);
         Flux<Integer> generateFlux = Flux.generate(sink -> {
-            //todo: fix following code so it emits values from 0 to 5 and then completes
             if (inc.get() > 5)
                 sink.complete();
             else
@@ -279,7 +278,6 @@ class c5_CreatingSequence {
         //------------------------------------------------------
 
         Flux<Integer> createFlux = Flux.create(sink -> {
-            //todo: fix following code so it emits values from 0 to 5 and then completes
             Stream.iterate(0, n -> n <= 5, n -> n + 1)
                     .forEachOrdered(sink::next);
             sink.complete();;
@@ -292,7 +290,6 @@ class c5_CreatingSequence {
         //------------------------------------------------------
 
         Flux<Integer> pushFlux = Flux.push(sink -> {
-            //todo: fix following code so it emits values from 0 to 5 and then completes
             Stream.iterate(0, n -> n <= 5, n -> n + 1)
                     .forEachOrdered(sink::next);
             sink.complete();;
@@ -308,7 +305,6 @@ class c5_CreatingSequence {
      */
     @Test
     void multi_threaded_producer() {
-        //todo: find a bug and fix it!
         Flux<Integer> producer = Flux.create(sink -> {
             for (int i = 0; i < 100; i++) {
                 int finalI = i;
