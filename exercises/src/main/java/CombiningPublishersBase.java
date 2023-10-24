@@ -42,7 +42,7 @@ public class CombiningPublishersBase {
         return Flux.range(1, 10)
                    //.delayElements(Duration.ofMillis(250))
                    .map(i -> Mono.<Void>fromRunnable(() -> {
-                       log.info(" > Executing task: #{}", i);
+                       System.out.println(" > Executing task: #" + i);
                        taskCounter.incrementAndGet();
                    }).subscribeOn(Schedulers.parallel()));
     }
@@ -117,12 +117,25 @@ public class CombiningPublishersBase {
     public Flux<String> userSearchInput() {
         return Flux.just("r", "re", "rea", "reac", "reac", "react", "reacto", "reactor")
                    .concatWith(Flux.just("reactive")
-                   .delaySubscription(Duration.ofMillis(500)))
+                        .delaySubscription(Duration.ofMillis(300))
+                   )
                    .doOnNext(n -> System.out.println("Typed: " + n));
+    }
+
+    public Flux<String> userSearchInputWithConcatWithoutDelaySubscription() {
+        return Flux.just("r", "re", "rea", "reac", "reac", "react", "reacto", "reactor")
+                .concatWith(Flux.just("reactive"))
+                .concatWith(Flux.just("rxJava"))
+                .doOnNext(n -> System.out.println("Typed: " + n));
     }
 
     public Flux<String> userSimpleSearchInput() {
         return Flux.just("r", "re", "rea", "reac", "reac", "react", "reacto", "reactor")
+                .doOnNext(n -> System.out.println("Typed: " + n));
+    }
+
+    public Flux<String> userSimpleSearchInput01() {
+        return Flux.just("r", "re", "rea", "rea", "reac", "reac", "reac", "react", "react", "reacto", "reactor", "reactor", "reactor")
                 .doOnNext(n -> System.out.println("Typed: " + n));
     }
 
@@ -338,8 +351,12 @@ public class CombiningPublishersBase {
         public static AtomicBoolean isOpen = new AtomicBoolean();
         public static AtomicBoolean cleanedUp = new AtomicBoolean();
 
+        private StreamingConnection() {}
+
         public static Mono<Flux<String>> startStreaming() {
-            return Mono.just(Flux.range(1, 20).map(i -> "Message #" + i)
+
+            return Mono.just(Flux.range(1, 20)
+                        .map(i -> "Message #" + i)
                        .delayElements(Duration.ofMillis(250))
                        .doOnNext(s -> System.out.println("Sending message: " + s))
                        .doFirst(() -> {
@@ -349,10 +366,13 @@ public class CombiningPublishersBase {
         }
 
         public static Mono<Void> closeConnection() {
-            return Mono.empty().doFirst(() -> {
-                System.out.println("Streaming stopped! Cleaning up...");
-                cleanedUp.set(true);
-            }).then();
+
+            return Mono.empty()
+                    .doFirst(() -> {
+                         System.out.println("Streaming stopped! Cleaning up...");
+                        cleanedUp.set(true);
+                    })
+                    .then();
         }
     }
 }

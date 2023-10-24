@@ -1,19 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
 
-  <groupId>com.github.schananas</groupId>
-  <artifactId>practical-reactor</artifactId>
-  <version>1.0</version>
+    <groupId>com.github.schananas</groupId>
+    <artifactId>practical-reactor</artifactId>
+    <version>1.0</version>
 
-  <name>Practical Reactor workshop</name>
-  <packaging>pom</packaging>
+    <name>Practical Reactor workshop</name>
+    <packaging>pom</packaging>
 
-  <modules>
-    <module>exercises</module>
-    <module>hint</module>
-  </modules>
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+    </properties>
+
+    <modules>
+        <module>exercises</module>
+        <module>hint</module>
+    </modules>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <source>${maven.compiler.source}</source>
+                    <target>${maven.compiler.target}</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.github.schananas</groupId>
+                <artifactId>hint</artifactId>
+                <version>1.0</version>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

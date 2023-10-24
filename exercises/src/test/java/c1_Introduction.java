@@ -1,3 +1,4 @@
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.*;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
@@ -44,7 +45,7 @@ class c1_Introduction extends IntroductionBase {
     void hello_world() {
         Mono<String> serviceResult = hello_world_service();
 
-        String result = serviceResult.block(); //todo: change this line only
+        String result = serviceResult.block();
 
         assertEquals("Hello World!", result);
     }
@@ -58,7 +59,7 @@ class c1_Introduction extends IntroductionBase {
         Exception exception = assertThrows(IllegalStateException.class, () -> {
             Mono<String> serviceResult = unresponsiveService();
 
-            String result = serviceResult.block(Duration.ofSeconds(1)); //todo: change this line only
+            String result = serviceResult.block(Duration.ofSeconds(1));
         });
 
         String expectedMessage = "Timeout on blocking read for 1";
@@ -75,10 +76,7 @@ class c1_Introduction extends IntroductionBase {
     void empty_service() {
         Mono<String> serviceResult = emptyService();
 
-        Optional<String> optionalServiceResult = serviceResult
-                .map(Optional::of)
-                .switchIfEmpty(Mono.just(Optional.empty()))
-                .block();
+        Optional<String> optionalServiceResult = serviceResult.blockOptional();
 
         assertTrue(optionalServiceResult.isEmpty());
         assertTrue(emptyServiceIsCalled.get());
@@ -95,9 +93,7 @@ class c1_Introduction extends IntroductionBase {
     void multi_result_service() {
         Flux<String> serviceResult = multiResultService();
 
-        String result = serviceResult
-                .blockFirst()
-                ;
+        String result = serviceResult.blockFirst();
 
         assertEquals("valid result", result);
     }
@@ -111,8 +107,7 @@ class c1_Introduction extends IntroductionBase {
     void fortune_top_five() {
         Flux<String> serviceResult = fortuneTop5();
 
-        List<String> results = serviceResult
-                .collectList()
+        List<String> results = serviceResult.collectList()
                 .block();
 
         assertEquals(Arrays.asList("Walmart", "Amazon", "Apple", "CVS Health", "UnitedHealth Group"), results);
@@ -139,9 +134,8 @@ class c1_Introduction extends IntroductionBase {
         Disposable disposable = serviceResult
                 .doOnNext(companyList::add)
                 .subscribe();
-        ;
 
-        Thread.sleep(1000); //bonus: can you explain why this line is needed?
+        Awaitility.await().until(disposable::isDisposed);
 
         assertEquals(Arrays.asList("Walmart", "Amazon", "Apple", "CVS Health", "UnitedHealth Group"), companyList);
     }
@@ -157,20 +151,15 @@ class c1_Introduction extends IntroductionBase {
      *  Don't use doOnNext, doOnError, doOnComplete hooks.
      */
     @Test
-    void leaving_blocking_world_behind() throws InterruptedException {
+    void leaving_blocking_world_behind() {
+
         AtomicReference<Boolean> serviceCallCompleted = new AtomicReference<>(false);
         CopyOnWriteArrayList<String> companyList = new CopyOnWriteArrayList<>();
 
-        fortuneTop5()
-                .doOnNext(companyList::add)
-                .doFinally(signalType -> {
-                    if(signalType == SignalType.ON_COMPLETE)
-                        serviceCallCompleted.set(true);
-                })
-                .subscribe();
-        ;
+        var disposable = fortuneTop5()
+                .subscribe(companyList::add, t-> {}, () -> serviceCallCompleted.set(true));
 
-        Thread.sleep(1000);
+        Awaitility.await().until(disposable::isDisposed);
 
         assertTrue(serviceCallCompleted.get());
         assertEquals(Arrays.asList("Walmart", "Amazon", "Apple", "CVS Health", "UnitedHealth Group"), companyList);

@@ -38,6 +38,16 @@ public class ErrorHandlingBase {
                    .concatWith(Flux.error(new RuntimeException("Service shutdown unexpectedly!")));
     }
 
+    public Flux<String> messageNode01() {
+        return Flux.just("0x1", "0x2", "0x3", "0x4")
+                .handle((s, sink) -> {
+                    if(s.equals("0x3"))
+                        sink.error(new RuntimeException("Service shutdown unexpectedly!"));
+                    else
+                        sink.next(s);
+                });
+    }
+
     public Flux<String> backupMessageNode() {
         return Flux.just("0x3", "0x4");
     }
@@ -56,13 +66,32 @@ public class ErrorHandlingBase {
 
     public Flux<Mono<String>> getFilesContent() {
         return Flux.just("file1.txt", "file2.txt", "file3.txt")
-                   .doOnNext(n -> System.out.println("Reading file: " + n))
-                   .map(n -> Mono.fromCallable(() -> {
-                       if (n.equals("file2.txt")) {
-                           throw new RuntimeException("file2.txt is broken");
+                .doOnNext(n -> System.out.println("Reading file: " + n))
+                .map(n -> Mono.fromCallable(() -> {
+                    if (n.equals("file2.txt")) {
+                        throw new RuntimeException("file2.txt is broken");
                        }
                        return n + " content";
-                   })).doOnError(e -> System.out.println("Error reading file: " + e.getMessage()));
+                   }))
+                .doOnError(e -> System.out.println("Error reading file: " + e.getMessage()));
+    }
+
+    public Flux<Mono<String>> getFilesContentWithDownstreamOnErrorResume() {
+        return Flux.just("file1.txt", "file2.txt", "file3.txt")
+                .doOnNext(n -> System.out.println("Reading file: " + n))
+                .flatMap(file -> Mono.just(file)
+                        .<Mono<String>>handle((s,sink) -> {
+                            if(s.equals("file2.txt"))
+                                sink.error(new RuntimeException("file2.txt is broken"));
+                            else
+                                sink.next(Mono.just(s + " content"));
+                        })
+                        .doOnError(e -> System.out.println("Error reading file: " + e.getMessage()))
+                        .onErrorResume(t -> {
+                            System.out.println("On error resume");
+                            return Mono.empty();})
+                        .onErrorStop() // Now, the on-error-continue is ignored, otherwise the on-error-continue takes the hand
+                );
     }
 
     public Mono<Integer> temperatureSensor() {
@@ -84,6 +113,7 @@ public class ErrorHandlingBase {
             }
             System.out.println("Establishing connection...");
             if (gate.get()) {
+                System.out.println("connection_established");
                 return "connection_established";
             } else {
                 if (!scheduled.get()) {

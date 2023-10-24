@@ -39,7 +39,6 @@ class c4_LifecycleHooks extends LifecycleHooksBase {
 
         Flux<Integer> temperatureFlux = room_temperature_service()
                 .doOnSubscribe(useless -> hooksTriggered.add("subscribe"));
-                ;
 
         StepVerifier.create(temperatureFlux.take(5))
                     .expectNextCount(5)
@@ -80,8 +79,7 @@ class c4_LifecycleHooks extends LifecycleHooksBase {
 
         Flux<Integer> temperatureFlux = room_temperature_service()
                 .doOnNext(x -> counter.incrementAndGet())
-                .doOnNext(System.out::println)
-                ;
+                .doOnNext(System.out::println);
 
         StepVerifier.create(temperatureFlux)
                     .expectNextCount(20)
@@ -99,9 +97,7 @@ class c4_LifecycleHooks extends LifecycleHooksBase {
         AtomicBoolean completed = new AtomicBoolean(false);
 
         Flux<Integer> temperatureFlux = room_temperature_service()
-                .doOnComplete(() -> completed.set(true))
-                //todo: change this line only
-                ;
+                .doOnComplete(() -> completed.set(true));
 
         StepVerifier.create(temperatureFlux.skip(20))
                     .expectNextCount(0)
@@ -119,8 +115,7 @@ class c4_LifecycleHooks extends LifecycleHooksBase {
         AtomicBoolean canceled = new AtomicBoolean(false);
 
         Flux<Integer> temperatureFlux = room_temperature_service()
-                .doOnCancel(() -> canceled.set(true))
-                ;
+                .doOnCancel(() -> canceled.set(true));
 
         StepVerifier.create(temperatureFlux.take(0))
                     .expectNextCount(0)
@@ -147,12 +142,12 @@ class c4_LifecycleHooks extends LifecycleHooksBase {
                     .expectNextCount(0)
                     .verifyComplete();
 
+        //Complete +1
         StepVerifier.create(temperatureFlux.skip(20))
                     .expectNextCount(0)
                     .verifyComplete();
 
-
-        // OnError
+        //OnError +1
         StepVerifier.create(temperatureFlux.skip(19).concatWith(Flux.error(new RuntimeException("oops"))))
                 .expectNextCount(1)
                 .expectError()
@@ -179,14 +174,17 @@ class c4_LifecycleHooks extends LifecycleHooksBase {
                 })
                 ;
 
+        //Cancel +1
         StepVerifier.create(temperatureFlux.take(0))
                     .expectNextCount(0)
                     .verifyComplete();
 
+        //Complete +1
         StepVerifier.create(temperatureFlux.skip(20))
                     .expectNextCount(0)
                     .verifyComplete();
 
+        //Error +1
         StepVerifier.create(temperatureFlux.skip(19)
                                            .concatWith(Flux.error(new RuntimeException("oops"))))
                 .expectNextCount(1)
@@ -209,7 +207,7 @@ class c4_LifecycleHooks extends LifecycleHooksBase {
                                  .doFirst(() -> sideEffects.add("one"));
 
         List<String> orderOfExecution =
-                Arrays.asList("one", "two", "three"); //todo: change this line only
+                Arrays.asList("one", "two", "three");
 
         StepVerifier.create(just)
                     .expectNext(true)
@@ -236,10 +234,9 @@ class c4_LifecycleHooks extends LifecycleHooksBase {
                 .doOnEach(signal -> {
                     if(signal.isOnNext())
                         signals.add("ON_NEXT");
-                    else
+                    else if(signal.isOnComplete())
                         signals.add("ON_COMPLETE");
-                })
-                ;
+                });
 
         StepVerifier.create(flux)
                     .expectNextCount(3)

@@ -1,3 +1,4 @@
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.*;
 import reactor.blockhound.BlockHound;
 import reactor.core.publisher.Flux;
@@ -44,12 +45,9 @@ class c6_CombiningPublishers extends CombiningPublishersBase {
     void behold_flatmap() {
         Hooks.enableContextLossTracking(); //used for testing - detects if you are cheating!
 
-        //todo: feel free to change code as you need
-        Mono<String> currentUserEmail = null;
-        currentUserEmail = getCurrentUser()
+        Mono<String> currentUserEmail = getCurrentUser()
                 .flatMap(this::getUserEmail);
 
-        //don't change below this line
         StepVerifier.create(currentUserEmail)
                     .expectNext("user123@gmail.com")
                     .verifyComplete();
@@ -64,11 +62,10 @@ class c6_CombiningPublishers extends CombiningPublishersBase {
      */
     @Test
     void task_executor() {
-        //todo: feel free to change code as you need
-        Flux<Void> tasks = taskExecutor()
-                .flatMap(m -> m);
 
-        //don't change below this line
+        Flux<Void> tasks = taskExecutor()
+                .flatMap(Function.identity());
+
         StepVerifier.create(tasks)
                     .verifyComplete();
 
@@ -83,11 +80,10 @@ class c6_CombiningPublishers extends CombiningPublishersBase {
      */
     @Test
     void streaming_service() {
-        //todo: feel free to change code as you need
+
         Flux<Message> messageFlux = streamingService()
                 .flatMapMany(flow -> flow);
 
-        //don't change below this line
         StepVerifier.create(messageFlux)
                     .expectNextCount(10)
                     .verifyComplete();
@@ -102,11 +98,10 @@ class c6_CombiningPublishers extends CombiningPublishersBase {
      */
     @Test
     void i_am_rubber_you_are_glue() {
-        //todo: feel free to change code as you need
+
         Flux<Integer> numbers = numberService1()
                 .concatWith(numberService2());
 
-        //don't change below this line
         StepVerifier.create(numbers)
                     .expectNext(1, 2, 3, 4, 5, 6, 7)
                     .verifyComplete();
@@ -128,26 +123,14 @@ class c6_CombiningPublishers extends CombiningPublishersBase {
      */
     @Test
     void task_executor_again() {
-        //todo: feel free to change code as you need
+
         Flux<Void> tasks = taskExecutor()
                 .concatMap(Function.identity());
 
-        //don't change below this line
         StepVerifier.create(tasks)
                     .verifyComplete();
 
         Assertions.assertEquals(taskCounter.get(), 10);
-
-        System.out.println("---");
-
-        //---
-        Flux<Void> tasks01 = taskExecutor()
-                .flatMap(m -> m);
-
-        StepVerifier.create(tasks01)
-                .verifyComplete();
-
-        Assertions.assertEquals(taskCounter.get(), 20);
     }
 
     /**
@@ -157,10 +140,9 @@ class c6_CombiningPublishers extends CombiningPublishersBase {
      */
     @Test
     void need_for_speed() {
-        //todo: feel free to change code as you need
+
         Flux<String> stones = Flux.firstWithValue(getStocksGrpc(), getStocksRest(), getStocksRpm());
 
-        //don't change below this line
         StepVerifier.create(stones)
                     .expectNextCount(5)
                     .verifyComplete();
@@ -173,11 +155,10 @@ class c6_CombiningPublishers extends CombiningPublishersBase {
      */
     @Test
     void plan_b() {
-        //todo: feel free to change code as you need
+
         Flux<String> stones = getStocksLocalCache()
                 .switchIfEmpty(getStocksRest());
 
-        //don't change below this line
         StepVerifier.create(stones)
                     .expectNextCount(6)
                     .verifyComplete();
@@ -191,7 +172,7 @@ class c6_CombiningPublishers extends CombiningPublishersBase {
      */
     @Test
     void mail_box_switcher() {
-        //todo: feel free to change code as you need
+
         Flux<Message> myMail = mailBoxPrimary()
                 .switchOnFirst( ((signal, messageFlux) -> {
 
@@ -203,7 +184,9 @@ class c6_CombiningPublishers extends CombiningPublishersBase {
                         out = messageFlux;
 
                     return out;
-                }));
+                }))
+                .doOnNext(m -> System.out.println(" > Message[header=\"" + m.metaData + "\", content=\"" + m.payload + "\"]"))
+                .doFirst(() -> System.out.println(" > Start the mail analyze."));
 
         //don't change below this line
         StepVerifier.create(myMail)
@@ -223,26 +206,24 @@ class c6_CombiningPublishers extends CombiningPublishersBase {
      */
     @Test
     void instant_search() {
-        //todo: feel free to change code as you need
-        //autoComplete(null);
-        Flux<String> suggestions = userSearchInput()
-                .switchMap(this::autoComplete)
-                //todo: use one operator only
-                ;
 
-        //don't change below this line
+        Flux<String> suggestions = userSearchInput()
+                .switchMap(this::autoComplete);
+
         StepVerifier.create(suggestions)
                     .expectNext("reactor project", "reactive project")
                     .verifyComplete();
 
-        Flux<String> simpleSuggestions = userSimpleSearchInput()
+        /*
+         * No delay of subscription just after the concatWith.
+         */
+        suggestions = userSearchInputWithConcatWithoutDelaySubscription()
                 .switchMap(this::autoComplete);
 
-        StepVerifier.create(simpleSuggestions)
-                .expectNext("reactor project")
+        StepVerifier.create(suggestions)
+                .expectNext("rxJava project")
                 .verifyComplete();
     }
-
 
     /**
      * Code should work, but it should also be easy to read and understand.
@@ -251,15 +232,12 @@ class c6_CombiningPublishers extends CombiningPublishersBase {
      */
     @Test
     void prettify() {
-        //todo: feel free to change code as you need
-        //todo: use when,and,then...
 
         Mono<Boolean> successful = Mono.when(openFile())
             .then(writeToFile("0x3522285912341"))
             .then(closeFile())
             .thenReturn(true);
 
-        //don't change below this line
         StepVerifier.create(successful)
                     .expectNext(true)
                     .verifyComplete();
@@ -447,14 +425,11 @@ class c6_CombiningPublishers extends CombiningPublishersBase {
      */
     @Test
     void cleanup() {
-        //BlockHound.install(); //don't change this line, blocking = cheating!
+
+        BlockHound.install(); //don't change this line, blocking = cheating!
 
         //todo: feel free to change code as you need
-        Flux<String> stream = StreamingConnection.startStreaming()
-                                                 .flatMapMany(Function.identity());
-        StreamingConnection.closeConnection();
-
-        stream = Flux.usingWhen(
+        Flux<String> stream = Flux.usingWhen(
                 StreamingConnection.startStreaming(),
                 stringFlux -> stringFlux,
                 x -> StreamingConnection.closeConnection()

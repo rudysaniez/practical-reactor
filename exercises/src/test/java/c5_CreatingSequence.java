@@ -41,7 +41,7 @@ class c5_CreatingSequence {
     @Test
     void value_I_already_have_mono() {
         String valueIAlreadyHave = "value";
-        Mono<String> valueIAlreadyHaveMono = Mono.just(valueIAlreadyHave); //todo: change this line only
+        Mono<String> valueIAlreadyHaveMono = Mono.just(valueIAlreadyHave);
 
         StepVerifier.create(valueIAlreadyHaveMono)
                 .expectNext("value")
@@ -54,7 +54,7 @@ class c5_CreatingSequence {
     @Test
     void potentially_null_mono() {
         String potentiallyNull = null;
-        Mono<String> potentiallyNullMono = Mono.justOrEmpty(potentiallyNull); //todo change this line only
+        Mono<String> potentiallyNullMono = Mono.justOrEmpty(potentiallyNull);
 
         StepVerifier.create(potentiallyNullMono)
                 .verifyComplete();
@@ -66,7 +66,7 @@ class c5_CreatingSequence {
     @Test
     void optional_value() {
         Optional<String> optionalValue = Optional.of("optional");
-        Mono<String> optionalMono = Mono.justOrEmpty(optionalValue); //todo: change this line only
+        Mono<String> optionalMono = Mono.justOrEmpty(optionalValue);
 
         StepVerifier.create(optionalMono)
                 .expectNext("optional")
@@ -84,7 +84,7 @@ class c5_CreatingSequence {
             return callableCounter.incrementAndGet();
         };
 
-        Mono<Integer> callableCounterMono = Mono.fromCallable(callable); //todo: change this line only
+        Mono<Integer> callableCounterMono = Mono.fromCallable(callable);
 
         StepVerifier.create(callableCounterMono.repeat(2))
                 .expectNext(1, 2, 3)
@@ -101,7 +101,7 @@ class c5_CreatingSequence {
             System.out.println("You are incrementing a counter via Future!");
             return futureCounter.incrementAndGet();
         });
-        Mono<Integer> futureCounterMono = Mono.fromFuture(completableFuture); //todo: change this line only
+        Mono<Integer> futureCounterMono = Mono.fromFuture(completableFuture);
 
         StepVerifier.create(futureCounterMono)
                 .expectNext(1)
@@ -120,7 +120,7 @@ class c5_CreatingSequence {
             runnableCounter.incrementAndGet();
             System.out.println("You are incrementing a counter via Runnable!");
         };
-        Mono<Integer> runnableMono = Mono.fromRunnable(runnable); //todo: change this line only
+        Mono<Void> runnableMono = Mono.fromRunnable(runnable);
 
         StepVerifier.create(runnableMono.repeat(2))
                 .verifyComplete();
@@ -133,7 +133,7 @@ class c5_CreatingSequence {
      */
     @Test
     void acknowledged() {
-        Mono<String> acknowledged = Mono.empty(); //todo: change this line only
+        Mono<String> acknowledged = Mono.empty();
 
         StepVerifier.create(acknowledged)
                 .verifyComplete();
@@ -144,7 +144,7 @@ class c5_CreatingSequence {
      */
     @Test
     void seen() {
-        Mono<String> seen = Mono.never(); //todo: change this line only
+        Mono<String> seen = Mono.never();
 
         StepVerifier.create(seen.timeout(Duration.ofSeconds(5)))
                 .expectSubscription()
@@ -157,7 +157,7 @@ class c5_CreatingSequence {
      */
     @Test
     void trouble_maker() {
-        Mono<String> trouble = Mono.error(new IllegalStateException()); //todo: change this line
+        Mono<String> trouble = Mono.error(new IllegalStateException());
 
         StepVerifier.create(trouble)
                 .expectError(IllegalStateException.class)
@@ -170,7 +170,7 @@ class c5_CreatingSequence {
     @Test
     void from_array() {
         Integer[] array = {1, 2, 3, 4, 5};
-        Flux<Integer> arrayFlux = Flux.fromArray(array); //todo: change this line only
+        Flux<Integer> arrayFlux = Flux.fromArray(array);
 
         StepVerifier.create(arrayFlux)
                 .expectNext(1, 2, 3, 4, 5)
@@ -183,7 +183,7 @@ class c5_CreatingSequence {
     @Test
     void from_list() {
         List<String> list = Arrays.asList("1", "2", "3", "4", "5");
-        Flux<String> listFlux = Flux.fromIterable(list); //todo: change this line only
+        Flux<String> listFlux = Flux.fromIterable(list);
 
         StepVerifier.create(listFlux.repeat(1))
                 .expectSubscription()
@@ -197,7 +197,7 @@ class c5_CreatingSequence {
     @Test
     void from_stream() {
         Stream<String> stream = Stream.of("5", "6", "7", "8", "9");
-        Flux<String> streamFlux = Flux.fromStream(stream); //todo: change this line only
+        Flux<String> streamFlux = Flux.fromStream(stream);
 
         StepVerifier.create(streamFlux)
                 .expectNext("5", "6", "7", "8", "9")
@@ -209,7 +209,7 @@ class c5_CreatingSequence {
      */
     @Test
     void interval() {
-        Flux<Long> interval = Flux.interval(Duration.ofSeconds(1)); //todo: change this line only
+        Flux<Long> interval = Flux.interval(Duration.ofSeconds(1));
 
         System.out.println("Interval: ");
         StepVerifier.create(interval.take(3).doOnNext(System.out::println))
@@ -227,7 +227,7 @@ class c5_CreatingSequence {
      */
     @Test
     void range() {
-        Flux<Integer> range = Flux.range(-5, 11); //todo: change this line only
+        Flux<Integer> range = Flux.range(-5, 11);
 
         System.out.println("Range: ");
         StepVerifier.create(range.doOnNext(System.out::println))
@@ -244,7 +244,7 @@ class c5_CreatingSequence {
         AtomicInteger counter = new AtomicInteger(0);
         Callable<Integer> callable = counter::incrementAndGet;
         Flux<Integer> repeated = Mono.fromCallable(callable)
-                .repeat(9); //todo: change this line
+                .repeat(9);
 
         System.out.println("Repeat: ");
         StepVerifier.create(repeated.doOnNext(System.out::println))
