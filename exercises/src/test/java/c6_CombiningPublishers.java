@@ -247,6 +247,26 @@ class c6_CombiningPublishers extends CombiningPublishersBase {
         Assertions.assertTrue(fileClosed.get());
     }
 
+    @Test
+    void prettifyTwo() {
+
+        Mono<Boolean> successful = Mono.when(openFile())
+                .then(Mono.fromCallable(() -> List.of(1,2,3)))
+                .flatMap(Mono::just)
+                .doOnNext(System.out::println)
+                .then(writeToFile("0x3522285912341"))
+                .then(closeFile())
+                .thenReturn(true);
+
+        StepVerifier.create(successful)
+                .expectNext(true)
+                .verifyComplete();
+
+        Assertions.assertTrue(fileOpened.get());
+        Assertions.assertTrue(writtenToFile.get());
+        Assertions.assertTrue(fileClosed.get());
+    }
+
     /**
      * Before reading from a file we need to open file first.
      */

@@ -126,7 +126,7 @@ class c1_Introduction extends IntroductionBase {
      * Change only marked line!
      */
     @Test
-    void nothing_happens_until_you_() throws InterruptedException {
+    void nothing_happens_until_you_() {
         CopyOnWriteArrayList<String> companyList = new CopyOnWriteArrayList<>();
 
         Flux<String> serviceResult = fortuneTop5();
