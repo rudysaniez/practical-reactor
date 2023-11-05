@@ -319,4 +319,21 @@ class c5_CreatingSequence {
                 .expectNextCount(100)
                 .verifyComplete();
     }
+
+    @Test
+    void multi_threaded_producer_01() {
+        Flux<Integer> producer = Flux.create(sink -> {
+            for (int i = 0; i < 25; i++) {
+                int finalI = i;
+                CompletableFuture.supplyAsync(() -> sink.next(finalI));
+            }
+        });
+
+        //do not change code below
+        StepVerifier.create(producer
+                        .doOnNext(System.out::println)
+                        .take(25))
+                .expectNextCount(25)
+                .verifyComplete();
+    }
 }

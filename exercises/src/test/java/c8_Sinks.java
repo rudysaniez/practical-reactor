@@ -1,6 +1,7 @@
 import org.junit.jupiter.api.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.SignalType;
 import reactor.core.publisher.Sinks;
 import reactor.test.StepVerifier;
 
@@ -24,7 +25,7 @@ import java.util.List;
  *
  * @author Stefan Dragisic
  */
-public class c8_Sinks extends SinksBase {
+class c8_Sinks extends SinksBase {
 
     /**
      * You need to execute operation that is submitted to legacy system which does not support Reactive API. You want to
@@ -32,12 +33,14 @@ public class c8_Sinks extends SinksBase {
      * operation is executed by legacy system.
      */
     @Test
-    public void single_shooter() {
+    void single_shooter() {
         //todo: feel free to change code as you need
-        Mono<Boolean> operationCompleted = null;
-        submitOperation(() -> {
+        Sinks.One<Boolean> sink = Sinks.one();
+        Mono<Boolean> operationCompleted = sink.asMono();
 
+        submitOperation(() -> {
             doSomeWork(); //don't change this line
+            sink.tryEmitValue(true);
         });
 
         //don't change code below
@@ -53,17 +56,19 @@ public class c8_Sinks extends SinksBase {
      * subscribers once they are subscribed.
      */
     @Test
-    public void single_subscriber() {
+    void single_subscriber() {
         //todo: feel free to change code as you need
-        Flux<Integer> measurements = null;
+        Sinks.Many<Integer> sink = Sinks.many().unicast().onBackpressureBuffer();
+        Flux<Integer> measurements = sink.asFlux();
         submitOperation(() -> {
 
             List<Integer> measures_readings = get_measures_readings(); //don't change this line
+            measures_readings.forEach(sink::tryEmitNext);
+            sink.tryEmitComplete();
         });
 
         //don't change code below
-        StepVerifier.create(measurements
-                                    .delaySubscription(Duration.ofSeconds(6)))
+        StepVerifier.create(measurements.delaySubscription(Duration.ofSeconds(6)))
                     .expectNext(0x0800, 0x0B64, 0x0504)
                     .verifyComplete();
     }
@@ -73,12 +78,15 @@ public class c8_Sinks extends SinksBase {
      * Subscribers should receive only the signals pushed through the sink after they have subscribed.
      */
     @Test
-    public void it_gets_crowded() {
+    void it_gets_crowded() {
         //todo: feel free to change code as you need
-        Flux<Integer> measurements = null;
+        Sinks.Many<Integer> sink = Sinks.many().multicast().onBackpressureBuffer();
+        Flux<Integer> measurements = sink.asFlux();
         submitOperation(() -> {
 
             List<Integer> measures_readings = get_measures_readings(); //don't change this line
+            measures_readings.forEach(sink::tryEmitNext);
+            sink.tryEmitComplete();
         });
 
         //don't change code below
@@ -96,9 +104,9 @@ public class c8_Sinks extends SinksBase {
      * `autoCancel` parameter.
      */
     @Test
-    public void open_24_7() {
+    void open_24_7() {
         //todo: set autoCancel parameter to prevent sink from closing
-        Sinks.Many<Integer> sink = Sinks.many().multicast().onBackpressureBuffer();
+        Sinks.Many<Integer> sink = Sinks.many().multicast().onBackpressureBuffer(500, false);
         Flux<Integer> flux = sink.asFlux();
 
         //don't change code below
@@ -138,9 +146,9 @@ public class c8_Sinks extends SinksBase {
      * Modify solution from `open_24_7` so third subscriber will receive all measurements.
      */
     @Test
-    public void blue_jeans() {
+    void blue_jeans() {
         //todo: enable autoCancel parameter to prevent sink from closing
-        Sinks.Many<Integer> sink = Sinks.many().multicast().onBackpressureBuffer();
+        Sinks.Many<Integer> sink = Sinks.many().replay().all();
         Flux<Integer> flux = sink.asFlux();
 
         //don't change code below
@@ -161,9 +169,18 @@ public class c8_Sinks extends SinksBase {
                                         .expectComplete()
                                         .verifyLater();
 
-        //subscriber3 subscribes after all previous subscribers have cancelled
+        //subscriber3 subscribes after all previous subscribers have cancelled (after 6 seconds)
         StepVerifier sub3 = StepVerifier.create(flux.take(3)
                                                     .delaySubscription(Duration.ofSeconds(6)))
+                                        .expectNext(0x0800)
+                                        .expectNext(0x0B64)
+                                        .expectNext(0x0504)
+                                        .expectComplete()
+                                        .verifyLater();
+
+        //subscriber4 subscribes in last (after 10 seconds)
+        StepVerifier sub4 = StepVerifier.create(flux.take(3)
+                                                    .delaySubscription(Duration.ofSeconds(10)))
                                         .expectNext(0x0800)
                                         .expectNext(0x0B64)
                                         .expectNext(0x0504)
@@ -173,6 +190,7 @@ public class c8_Sinks extends SinksBase {
         sub1.verify();
         sub2.verify();
         sub3.verify();
+        sub4.verify();
     }
 
 
@@ -181,13 +199,14 @@ public class c8_Sinks extends SinksBase {
      * If yes, how? Find out and fix it.
      */
     @Test
-    public void emit_failure() {
+    void emit_failure() throws InterruptedException {
         //todo: feel free to change code as you need
-        Sinks.Many<Integer> sink = Sinks.many().replay().all();
+        Sinks.Many<Integer> sink = Sinks.many().unicast().onBackpressureBuffer();
 
         for (int i = 1; i <= 50; i++) {
             int finalI = i;
-            new Thread(() -> sink.tryEmitNext(finalI)).start();
+            new Thread(() -> sink.emitNext(finalI,
+                    (signalType, emitResult) -> emitResult.equals(Sinks.EmitResult.FAIL_NON_SERIALIZED))).start();
         }
 
         //don't change code below
