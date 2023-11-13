@@ -49,7 +49,6 @@ class c9_ExecutionControl extends ExecutionControlBase {
         Flux<String> notifications = readNotifications()
                 .delayElements(Duration.ofSeconds(1))
                 .doOnNext(System.out::println)
-                //todo: change this line only
                 ;
 
         StepVerifier.create(notifications
@@ -75,11 +74,10 @@ class c9_ExecutionControl extends ExecutionControlBase {
      * Delay execution of tasks until semaphore signals you that you can execute the task.
      */
     @Test
-    public void ready_set_go() {
+    void ready_set_go() {
         //todo: feel free to change code as you need
         Flux<String> tasks = tasks()
-                .flatMap(Function.identity());
-        semaphore();
+                .concatMap(task -> task.delaySubscription(semaphoreNumeric()));
 
         //don't change code below
         StepVerifier.create(tasks)

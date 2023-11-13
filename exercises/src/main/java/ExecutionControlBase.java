@@ -23,6 +23,12 @@ public class ExecutionControlBase {
         ).map(s -> "go").doOnNext(s -> System.out.println("Semaphore says: " + s));
     }
 
+    public Flux<Integer> semaphoreNumeric() {
+        return Flux.interval(
+                Duration.ofMillis(2250)
+        ).map(s -> 1).doOnNext(s -> System.out.println("Semaphore says: " + s));
+    }
+
     public Flux<Mono<String>> tasks() {
         return Flux.just(Mono.just("1")
                              .doOnNext(n -> System.out.println("Executing task #1..."))
