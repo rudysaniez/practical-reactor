@@ -1,7 +1,10 @@
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.*;
+import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -30,7 +33,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * @author Stefan Dragisic
  */
-public class c1_Introduction extends IntroductionBase {
+class c1_Introduction extends IntroductionBase {
 
     /**
      * Every journey starts with Hello World!
@@ -38,10 +41,10 @@ public class c1_Introduction extends IntroductionBase {
      * Retrieve result from this Mono by blocking indefinitely or until a next signal is received.
      */
     @Test
-    public void hello_world() {
+    void hello_world() {
         Mono<String> serviceResult = hello_world_service();
 
-        String result = null; //todo: change this line only
+        String result = serviceResult.block(); //todo: change this line only
 
         assertEquals("Hello World!", result);
     }
@@ -51,11 +54,11 @@ public class c1_Introduction extends IntroductionBase {
      * Try retrieving result from service by blocking for maximum of 1 second or until a next signal is received.
      */
     @Test
-    public void unresponsive_service() {
+    void unresponsive_service() {
         Exception exception = assertThrows(IllegalStateException.class, () -> {
             Mono<String> serviceResult = unresponsiveService();
 
-            String result = null; //todo: change this line only
+            String result = serviceResult.block(Duration.ofSeconds(1)); //todo: change this line only
         });
 
         String expectedMessage = "Timeout on blocking read for 1";
@@ -69,10 +72,10 @@ public class c1_Introduction extends IntroductionBase {
      * Retrieve result from the service as optional object.
      */
     @Test
-    public void empty_service() {
+    void empty_service() {
         Mono<String> serviceResult = emptyService();
 
-        Optional<String> optionalServiceResult = null; //todo: change this line only
+        Optional<String> optionalServiceResult = serviceResult.blockOptional(); //todo: change this line only
 
         assertTrue(optionalServiceResult.isEmpty());
         assertTrue(emptyServiceIsCalled.get());
@@ -86,10 +89,10 @@ public class c1_Introduction extends IntroductionBase {
      * Retrieve first item from this Flux by blocking indefinitely until a first item is received.
      */
     @Test
-    public void multi_result_service() {
+    void multi_result_service() {
         Flux<String> serviceResult = multiResultService();
 
-        String result = serviceResult.toString(); //todo: change this line only
+        String result = serviceResult.blockFirst(); //todo: change this line only
 
         assertEquals("valid result", result);
     }
@@ -100,10 +103,10 @@ public class c1_Introduction extends IntroductionBase {
      * Retrieve results by blocking.
      */
     @Test
-    public void fortune_top_five() {
+    void fortune_top_five() {
         Flux<String> serviceResult = fortuneTop5();
 
-        List<String> results = emptyList(); //todo: change this line only
+        List<String> results = serviceResult.collectList().block(); //todo: change this line only
 
         assertEquals(Arrays.asList("Walmart", "Amazon", "Apple", "CVS Health", "UnitedHealth Group"), results);
         assertTrue(fortuneTop5ServiceIsCalled.get());
@@ -121,17 +124,18 @@ public class c1_Introduction extends IntroductionBase {
      * Change only marked line!
      */
     @Test
-    public void nothing_happens_until_you_() throws InterruptedException {
+    void nothing_happens_until_you_() throws InterruptedException {
         CopyOnWriteArrayList<String> companyList = new CopyOnWriteArrayList<>();
 
         Flux<String> serviceResult = fortuneTop5();
 
-        serviceResult
+        Disposable disposable = serviceResult
                 .doOnNext(companyList::add)
+                .subscribe()
         //todo: add an operator here, don't use any blocking operator!
         ;
 
-        Thread.sleep(1000); //bonus: can you explain why this line is needed?
+        Awaitility.await().until(disposable::isDisposed);
 
         assertEquals(Arrays.asList("Walmart", "Amazon", "Apple", "CVS Health", "UnitedHealth Group"), companyList);
     }
@@ -147,15 +151,15 @@ public class c1_Introduction extends IntroductionBase {
      *  Don't use doOnNext, doOnError, doOnComplete hooks.
      */
     @Test
-    public void leaving_blocking_world_behind() throws InterruptedException {
+    void leaving_blocking_world_behind() throws InterruptedException {
         AtomicReference<Boolean> serviceCallCompleted = new AtomicReference<>(false);
         CopyOnWriteArrayList<String> companyList = new CopyOnWriteArrayList<>();
 
-        fortuneTop5()
+        Disposable disposable = fortuneTop5()
+                .subscribe(companyList::add, t -> {}, () -> serviceCallCompleted.set(true));
         //todo: change this line only
-        ;
 
-        Thread.sleep(1000);
+        Awaitility.await().until(disposable::isDisposed);
 
         assertTrue(serviceCallCompleted.get());
         assertEquals(Arrays.asList("Walmart", "Amazon", "Apple", "CVS Health", "UnitedHealth Group"), companyList);
