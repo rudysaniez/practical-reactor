@@ -3,6 +3,9 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 /**
  * It's time to do some data manipulation!
  *
@@ -18,15 +21,16 @@ import reactor.test.StepVerifier;
  *
  * @author Stefan Dragisic
  */
-public class c2_TransformingSequence extends TransformingSequenceBase {
+class c2_TransformingSequence extends TransformingSequenceBase {
 
     /***
      * Your task is simple:
      *  Increment each number emitted by the numerical service
      */
     @Test
-    public void transforming_sequence() {
+    void transforming_sequence() {
         Flux<Integer> numbersFlux = numerical_service()
+                .map(i -> i +1)
                 //todo change only this line
                 ;
 
@@ -44,11 +48,21 @@ public class c2_TransformingSequence extends TransformingSequenceBase {
      *   - "<": if given number is lesser then 0
      */
     @Test
-    public void transforming_sequence_2() {
+    void transforming_sequence_2() {
         Flux<Integer> numbersFlux = numerical_service_2();
 
         //todo: do your changes here
-        Flux<String> resultSequence = null;
+        Flux<String> resultSequence = numbersFlux
+                .map(i -> {
+                            String out = "=";
+                            if(i > 0)
+                                out = ">";
+                            else if(i < 0)
+                                out = "<";
+
+                            return out;
+                        }
+                );
 
         //don't change code below
         StepVerifier.create(resultSequence)
@@ -63,9 +77,9 @@ public class c2_TransformingSequence extends TransformingSequenceBase {
      * Remove `map` operator and use more appropriate operator to cast sequence to String.
      */
     @Test
-    public void cast() {
+    void cast() {
         Flux<String> numbersFlux = object_service()
-                .map(i -> (String) i); //todo: change this line only
+                .cast(String.class);
 
 
         StepVerifier.create(numbersFlux)
@@ -78,8 +92,9 @@ public class c2_TransformingSequence extends TransformingSequenceBase {
      * In case it doesn't return any result, return value "no results".
      */
     @Test
-    public void maybe() {
+    void maybe() {
         Mono<String> result = maybe_service()
+                .switchIfEmpty(Mono.just("no results"))
                 //todo: change this line only
                 ;
 
@@ -93,11 +108,14 @@ public class c2_TransformingSequence extends TransformingSequenceBase {
      * this service.
      */
     @Test
-    public void sequence_sum() {
+    void sequence_sum() {
         //todo: change code as you need
-        Mono<Integer> sum = null;
-        numerical_service();
-
+        Mono<Integer> sum = numerical_service()
+                //.reduce(Integer::sum)
+                //.reduce(0, Integer::sum)
+                .reduceWith(() -> 0, Integer::sum)
+                //.collect(Collectors.summingInt(i -> i))
+                ;
         //don't change code below
         StepVerifier.create(sum)
                     .expectNext(55)
@@ -109,8 +127,11 @@ public class c2_TransformingSequence extends TransformingSequenceBase {
      *  Use first Flux value as initial value.
      */
     @Test
-    public void sum_each_successive() {
+    void sum_each_successive() {
         Flux<Integer> sumEach = numerical_service()
+                //.scan((i, j) -> i + j)
+                .scan(Integer::sum)
+                .doOnNext(System.out::println)
                 //todo: do your changes here
                 ;
 
@@ -127,9 +148,11 @@ public class c2_TransformingSequence extends TransformingSequenceBase {
      * Use only one operator.
      */
     @Test
-    public void sequence_starts_with_zero() {
+    void sequence_starts_with_zero() {
         Flux<Integer> result = numerical_service()
-                //todo: change this line only
+                .startWith(Flux.just(0))
+                //.startWith(0)
+                //.startWith(List.of(0))
                 ;
 
         StepVerifier.create(result)
