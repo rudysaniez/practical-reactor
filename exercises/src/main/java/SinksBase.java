@@ -1,6 +1,8 @@
+import java.sql.Time;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -10,6 +12,12 @@ public class SinksBase {
 
     public void submitOperation(Runnable operation) {
         Executors.newScheduledThreadPool(1).schedule(operation, 5, TimeUnit.SECONDS);
+    }
+
+    public void submitOperationCloseable(Runnable operation, int delayInSeconds) {
+        try(ScheduledExecutorService scheduled = Executors.newScheduledThreadPool(1)) {
+            scheduled.schedule(operation, delayInSeconds, TimeUnit.SECONDS);
+        }
     }
 
     //don't change me
