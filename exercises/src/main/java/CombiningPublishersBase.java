@@ -99,8 +99,17 @@ public class CombiningPublishersBase {
 
     public Flux<String> userSearchInput() {
         return Flux.just("r", "re", "rea", "reac", "reac", "react", "reacto", "reactor")
-                   .concatWith(Flux.just("reactive").delaySubscription(Duration.ofMillis(500)))
+                   .concatWith(Flux.just("reactive")
+                   .delaySubscription(Duration.ofMillis(500)))
                    .doOnNext(n -> System.out.println("Typed: " + n));
+    }
+
+    public Flux<String> userOtherSearchInput() {
+        return Flux.just("r", "re", "rea", "reac", "reac", "react", "reacto", "reactor")
+                .concatWith(Flux.just("reactive")
+                .concatWith(Flux.just("rx-programming"))
+                .delaySubscription(Duration.ofMillis(500)))
+                .doOnNext(n -> System.out.println("Typed: " + n));
     }
 
     public Mono<String> autoComplete(String word) {
