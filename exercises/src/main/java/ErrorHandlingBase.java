@@ -38,6 +38,12 @@ public class ErrorHandlingBase {
                    .concatWith(Flux.error(new RuntimeException("Service shutdown unexpectedly!")));
     }
 
+    public Flux<String> messageNodeWithErrorBetweenTwoFlows() {
+        return Flux.just("0x1", "0x2")
+                .concatWith(Flux.error(new RuntimeException("Service shutdown unexpectedly!")))
+                .concatWith(Flux.just("0x3", "0x4"));
+    }
+
     public Flux<String> backupMessageNode() {
         return Flux.just("0x3", "0x4");
     }

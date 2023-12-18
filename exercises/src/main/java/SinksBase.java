@@ -25,6 +25,11 @@ public class SinksBase {
         System.out.println("Doing some work");
     }
 
+    public boolean doSomeWorkByLegacyApplication() {
+        System.out.println("Doing some work");
+        return true;
+    }
+
     //don't change me
     public List<Integer> get_measures_readings() {
         System.out.println("Reading measurements...");
