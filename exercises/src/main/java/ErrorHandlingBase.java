@@ -65,7 +65,11 @@ public class ErrorHandlingBase {
                    })).doOnError(e -> System.out.println("Error reading file: " + e.getMessage()));
     }
 
-    public Mono<Integer> temperatureSensor() {
+    /**
+     *
+     * @return {@return Mono<Integer>}
+     */
+    public Mono<Integer> temperatureSensor() throws RuntimeException {
         return Mono.fromCallable(() -> {
             if (counter.decrementAndGet() == 0) {
                 return 34;

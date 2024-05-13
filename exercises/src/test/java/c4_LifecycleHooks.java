@@ -1,4 +1,5 @@
 import org.junit.jupiter.api.*;
+import org.reactivestreams.Subscription;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -26,23 +27,23 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * @author Stefan Dragisic
  */
-public class c4_LifecycleHooks extends LifecycleHooksBase {
+class c4_LifecycleHooks extends LifecycleHooksBase {
 
     /**
      * Add a hook that will execute when Flux `temperatureFlux` is subscribed too.
      * As a side effect hook should add string "subscribe" to `hooksTriggered` list.
      */
     @Test
-    public void no_subscription_no_gains() {
+    void no_subscription_no_gains() {
         CopyOnWriteArrayList<String> hooksTriggered = new CopyOnWriteArrayList<>();
 
         Flux<Integer> temperatureFlux = room_temperature_service()
-                //todo: change this line only
-                ;
+            .doOnSubscribe(sub -> hooksTriggered.add("subscribe"))
+            ;
 
         StepVerifier.create(temperatureFlux.take(5))
-                    .expectNextCount(5)
-                    .verifyComplete();
+            .expectNextCount(5)
+            .verifyComplete();
 
         Assertions.assertEquals(hooksTriggered, List.of("subscribe"));
     }
@@ -52,16 +53,17 @@ public class c4_LifecycleHooks extends LifecycleHooksBase {
      * string "before subscribe" to `hooksTriggered` list.
      */
     @Test
-    public void be_there_early() {
+    void be_there_early() {
         CopyOnWriteArrayList<String> hooksTriggered = new CopyOnWriteArrayList<>();
 
         Flux<Integer> temperatureFlux = room_temperature_service()
-                //todo: change this line only
-                ;
+            .doOnSubscribe(sub -> hooksTriggered.add("subscribe"))
+            .doFirst(() -> hooksTriggered.add("before subscribe"))
+            ;
 
-        StepVerifier.create(temperatureFlux.take(5).doOnSubscribe(s -> hooksTriggered.add("subscribe")))
-                    .expectNextCount(5)
-                    .verifyComplete();
+        StepVerifier.create(temperatureFlux.take(5))
+            .expectNextCount(5)
+            .verifyComplete();
 
         Assertions.assertEquals(hooksTriggered, Arrays.asList("before subscribe", "subscribe"));
     }
@@ -71,18 +73,30 @@ public class c4_LifecycleHooks extends LifecycleHooksBase {
      * using `System.out` and increment `counter` value.
      */
     @Test
-    public void atomic_counter() {
+    void atomic_counter() {
         AtomicInteger counter = new AtomicInteger(0);
+        AtomicInteger counter02 = new AtomicInteger(0);
 
         Flux<Integer> temperatureFlux = room_temperature_service()
-                //todo: change this line only
-                ;
+            .doOnSubscribe(i -> System.out.println("I subscribe ! "))
+            .doOnNext(i -> counter.incrementAndGet())
+            .map(i -> {
+                System.out.println(">" + i);
+                return i;
+            })
+            .doOnNext(i -> counter02.incrementAndGet())
+            .map(j -> j + 1)
+            .flatMap(i -> Mono.just(i + 10))
+            .doOnSubscribe(i -> System.out.println("I subscribe !  (second)"))
+            .doOnNext(iAdded -> System.out.println(" i + 10 = " + iAdded))
+            ;
 
         StepVerifier.create(temperatureFlux)
                     .expectNextCount(20)
                     .verifyComplete();
 
         Assertions.assertEquals(counter.get(), 20);
+        Assertions.assertEquals(counter02.get(), 20);
     }
 
     /**
@@ -90,11 +104,12 @@ public class c4_LifecycleHooks extends LifecycleHooksBase {
      * `completed` flag to true.
      */
     @Test
-    public void successfully_executed() {
+    void successfully_executed() {
         AtomicBoolean completed = new AtomicBoolean(false);
 
         Flux<Integer> temperatureFlux = room_temperature_service()
-                //todo: change this line only
+                .doOnComplete(() -> completed.set(true))
+                .doOnCancel(() -> System.out.println("Cancel"))
                 ;
 
         StepVerifier.create(temperatureFlux.skip(20))
@@ -109,16 +124,16 @@ public class c4_LifecycleHooks extends LifecycleHooksBase {
      * `canceled` flag to true.
      */
     @Test
-    public void need_to_cancel() {
+    void need_to_cancel() {
         AtomicBoolean canceled = new AtomicBoolean(false);
 
         Flux<Integer> temperatureFlux = room_temperature_service()
-                //todo: change this line only
-                ;
+            .doOnCancel(() -> canceled.set(true))
+            ;
 
-        StepVerifier.create(temperatureFlux.take(0))
-                    .expectNextCount(0)
-                    .verifyComplete();
+        StepVerifier.create(temperatureFlux.take(1))
+            .expectNextCount(1)
+            .verifyComplete();
 
         Assertions.assertTrue(canceled.get());
     }
@@ -129,12 +144,12 @@ public class c4_LifecycleHooks extends LifecycleHooksBase {
      * Use only one operator.
      */
     @Test
-    public void terminator() {
+    void terminator() {
         AtomicInteger hooksTriggeredCounter = new AtomicInteger(0);
 
         Flux<Integer> temperatureFlux = room_temperature_service()
-                //todo: change this line only
-                ;
+            //todo: change this line only
+            ;
 
         StepVerifier.create(temperatureFlux.take(0))
                     .expectNextCount(0)

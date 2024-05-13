@@ -139,8 +139,8 @@ public class c5_CreatingSequence {
      * Create Mono that emits no value and never completes.
      */
     @Test
-    public void seen() {
-        Mono<String> seen = null; //todo: change this line only
+    void seen() {
+        Mono<String> seen = Mono.never(); //todo: change this line only
 
         StepVerifier.create(seen.timeout(Duration.ofSeconds(5)))
                     .expectSubscription()
@@ -152,8 +152,8 @@ public class c5_CreatingSequence {
      * Create Mono that completes exceptionally with exception `IllegalStateException`.
      */
     @Test
-    public void trouble_maker() {
-        Mono<String> trouble = null; //todo: change this line
+    void trouble_maker() {
+        Mono<String> trouble = Mono.error(new IllegalStateException());
 
         StepVerifier.create(trouble)
                     .expectError(IllegalStateException.class)
@@ -164,35 +164,35 @@ public class c5_CreatingSequence {
      * Create Flux that will emit all values from the array.
      */
     @Test
-    public void from_array() {
+    void from_array() {
         Integer[] array = {1, 2, 3, 4, 5};
-        Flux<Integer> arrayFlux = null; //todo: change this line only
+        Flux<Integer> arrayFlux = Flux.fromArray(array);
 
         StepVerifier.create(arrayFlux)
-                    .expectNext(1, 2, 3, 4, 5)
-                    .verifyComplete();
+            .expectNext(1, 2, 3, 4, 5)
+            .verifyComplete();
     }
 
     /**
      * Create Flux that will emit all values from the list.
      */
     @Test
-    public void from_list() {
+    void from_list() {
         List<String> list = Arrays.asList("1", "2", "3", "4", "5");
-        Flux<String> listFlux = null; //todo: change this line only
+        Flux<String> listFlux = Flux.fromIterable(list);
 
         StepVerifier.create(listFlux)
-                    .expectNext("1", "2", "3", "4", "5")
-                    .verifyComplete();
+            .expectNext("1", "2", "3", "4", "5")
+            .verifyComplete();
     }
 
     /**
      * Create Flux that will emit all values from the stream.
      */
     @Test
-    public void from_stream() {
+    void from_stream() {
         Stream<String> stream = Stream.of("5", "6", "7", "8", "9");
-        Flux<String> streamFlux = null; //todo: change this line only
+        Flux<String> streamFlux = Flux.fromStream(stream); //todo: change this line only
 
         StepVerifier.create(streamFlux)
                     .expectNext("5", "6", "7", "8", "9")
@@ -203,8 +203,8 @@ public class c5_CreatingSequence {
      * Create Flux that emits number incrementing numbers at interval of 1 second.
      */
     @Test
-    public void interval() {
-        Flux<Long> interval = null; //todo: change this line only
+    void interval() {
+        Flux<Long> interval = Flux.interval(Duration.ofSeconds(1)); //todo: change this line only
 
         System.out.println("Interval: ");
         StepVerifier.create(interval.take(3).doOnNext(System.out::println))
@@ -221,8 +221,8 @@ public class c5_CreatingSequence {
      * Create Flux that emits range of integers from [-5,5].
      */
     @Test
-    public void range() {
-        Flux<Integer> range = null; //todo: change this line only
+    void range() {
+        Flux<Integer> range = Flux.range(-5, 11); //todo: change this line only
 
         System.out.println("Range: ");
         StepVerifier.create(range.doOnNext(System.out::println))
@@ -235,9 +235,10 @@ public class c5_CreatingSequence {
      * values from 0 to 10.
      */
     @Test
-    public void repeat() {
+    void repeat() {
         AtomicInteger counter = new AtomicInteger(0);
-        Flux<Integer> repeated = null; //todo: change this line
+        Flux<Integer> repeated = Mono.fromCallable(counter::incrementAndGet)
+            .repeat(9);
 
         System.out.println("Repeat: ");
         StepVerifier.create(repeated.doOnNext(System.out::println))
@@ -254,22 +255,40 @@ public class c5_CreatingSequence {
      * - What is difference between `create` and `push`?
      */
     @Test
-    public void generate_programmatically() {
+    void generate_programmatically() {
 
+        AtomicInteger values = new AtomicInteger();
         Flux<Integer> generateFlux = Flux.generate(sink -> {
-            //todo: fix following code so it emits values from 0 to 5 and then completes
+            if(values.get() > 5)
+                sink.complete();
+
+            sink.next(values.getAndIncrement());
         });
 
         //------------------------------------------------------
 
         Flux<Integer> createFlux = Flux.create(sink -> {
             //todo: fix following code so it emits values from 0 to 5 and then completes
+            sink.next(0);
+            sink.next(1);
+            sink.next(2);
+            sink.next(3);
+            sink.next(4);
+            sink.next(5);
+            sink.complete();
         });
 
         //------------------------------------------------------
 
         Flux<Integer> pushFlux = Flux.push(sink -> {
             //todo: fix following code so it emits values from 0 to 5 and then completes
+            sink.next(0);
+            sink.next(1);
+            sink.next(2);
+            sink.next(3);
+            sink.next(4);
+            sink.next(5);
+            sink.complete();
         });
 
         StepVerifier.create(generateFlux)
@@ -289,9 +308,9 @@ public class c5_CreatingSequence {
      * Something is wrong with the following code. Find the bug and fix it so test passes.
      */
     @Test
-    public void multi_threaded_producer() {
-        //todo: find a bug and fix it!
-        Flux<Integer> producer = Flux.push(sink -> {
+    void multi_threaded_producer() {
+
+        Flux<Integer> producer = Flux.create(sink -> {
             for (int i = 0; i < 100; i++) {
                 int finalI = i;
                 new Thread(() -> sink.next(finalI)).start(); //don't change this line!
@@ -300,9 +319,9 @@ public class c5_CreatingSequence {
 
         //do not change code below
         StepVerifier.create(producer
-                                    .doOnNext(System.out::println)
-                                    .take(100))
-                    .expectNextCount(100)
-                    .verifyComplete();
+            .doOnNext(System.out::println)
+            .take(100))
+            .expectNextCount(100)
+            .verifyComplete();
     }
 }

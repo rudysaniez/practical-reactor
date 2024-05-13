@@ -37,30 +37,32 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  * @author Stefan Dragisic
  */
-public class c10_Backpressure extends BackpressureBase {
+class c10_Backpressure extends BackpressureBase {
 
     /**
      * In this exercise subscriber (test) will request several messages from the message stream.
      * Hook to the requests and record them to the `requests` list.
      */
     @Test
-    public void request_and_demand() {
+    void request_and_demand() {
+
         CopyOnWriteArrayList<Long> requests = new CopyOnWriteArrayList<>();
+
         Flux<String> messageStream = messageStream1()
-                //todo: change this line only
-                ;
+            .doOnRequest(requests::add);
+            ;
 
         StepVerifier.create(messageStream, StepVerifierOptions.create().initialRequest(0))
-                    .expectSubscription()
-                    .thenRequest(1)
-                    .then(() -> pub1.next("msg#1"))
-                    .thenRequest(3)
-                    .then(() -> pub1.next("msg#2", "msg#3"))
-                    .then(pub1::complete)
-                    .expectNext("msg#1", "msg#2", "msg#3")
-                    .verifyComplete();
+            .expectSubscription()
+            .thenRequest(1)
+            .then(() -> pub1.next("msg#1"))
+            .thenRequest(2)
+            .then(() -> pub1.next("msg#2", "msg#3"))
+            .then(pub1::complete)
+            .expectNext("msg#1", "msg#2", "msg#3")
+            .verifyComplete();
 
-        Assertions.assertEquals(List.of(1L, 3L), requests);
+        Assertions.assertEquals(List.of(1L, 2L), requests);
     }
 
     /**
@@ -68,21 +70,22 @@ public class c10_Backpressure extends BackpressureBase {
      * same, but each request should be limited to 1 message.
      */
     @Test
-    public void limited_demand() {
+    void limited_demand() {
         CopyOnWriteArrayList<Long> requests = new CopyOnWriteArrayList<>();
         Flux<String> messageStream = messageStream2()
-                //todo: do your changes here
-                ;
+            .doOnRequest(requests::add)
+            .limitRate(1)
+            ;
 
         StepVerifier.create(messageStream, StepVerifierOptions.create().initialRequest(0))
-                    .expectSubscription()
-                    .thenRequest(1)
-                    .then(() -> pub2.next("msg#1"))
-                    .thenRequest(3)
-                    .then(() -> pub2.next("msg#2", "msg#3"))
-                    .then(pub2::complete)
-                    .expectNext("msg#1", "msg#2", "msg#3")
-                    .verifyComplete();
+            .expectSubscription()
+            .thenRequest(1)
+            .then(() -> pub2.next("msg#1"))
+            .thenRequest(3)
+            .then(() -> pub2.next("msg#2", "msg#3"))
+            .then(pub2::complete)
+            .expectNext("msg#1", "msg#2", "msg#3")
+            .verifyComplete();
 
         Assertions.assertEquals(List.of(1L, 1L, 1L, 1L), requests);
     }
@@ -92,21 +95,26 @@ public class c10_Backpressure extends BackpressureBase {
      * should respect the backpressure of the consumer.
      */
     @Test
-    public void uuid_generator() {
+    void uuid_generator() {
         Flux<UUID> uuidGenerator = Flux.create(sink -> {
-            //todo: do your changes here
+            sink.onRequest(request -> {
+                System.out.println(" Request value is " + request);
+                for(int i = 0 ; i < request ; i++)
+                    sink.next(UUID.randomUUID());
+            });
         });
 
         StepVerifier.create(uuidGenerator
                                     .doOnNext(System.out::println)
                                     .timeout(Duration.ofSeconds(1))
                                     .onErrorResume(TimeoutException.class, e -> Flux.empty()),
-                            StepVerifierOptions.create().initialRequest(0))
-                    .expectSubscription()
-                    .thenRequest(10)
-                    .expectNextCount(10)
-                    .thenCancel()
-                    .verify();
+                            StepVerifierOptions.create().initialRequest(0)
+        )
+        .expectSubscription()
+        .thenRequest(10)
+        .expectNextCount(10)
+        .thenCancel()
+        .verify();
     }
 
     /**
@@ -114,10 +122,11 @@ public class c10_Backpressure extends BackpressureBase {
      * In case that publisher produces more messages than subscriber is able to consume, raise an error.
      */
     @Test
-    public void pressure_is_too_much() {
+    void pressure_is_too_much() {
         Flux<String> messageStream = messageStream3()
-                //todo: change this line only
-                ;
+            .onBackpressureError()
+            .doOnNext(System.out::println)
+            ;
 
         StepVerifier.create(messageStream, StepVerifierOptions.create()
                                                               .initialRequest(0))

@@ -19,13 +19,13 @@ import reactor.test.StepVerifier;
  *
  * @author Stefan Dragisic
  */
-public class c3_FilteringSequence extends FilteringSequenceBase {
+class c3_FilteringSequence extends FilteringSequenceBase {
 
     /**
      * Collect most popular girl names, no longer then 4 characters.
      */
     @Test
-    public void girls_are_made_of_sugar_and_spice() {
+    void girls_are_made_of_sugar_and_spice() {
         Flux<String> shortListed = popular_girl_names_service()
                 //todo: change this line only
                 ;

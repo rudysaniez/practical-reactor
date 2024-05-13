@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
  *
  * @author Stefan Dragisic
  */
-public class c9_ExecutionControl extends ExecutionControlBase {
+class c9_ExecutionControl extends ExecutionControlBase {
 
     /**
      * You are working on smartphone app and this part of code should show user his notifications. Since there could be
@@ -44,7 +44,7 @@ public class c9_ExecutionControl extends ExecutionControlBase {
      * Pay attention to threading, compare what code prints out before and after solution. Explain why?
      */
     @Test
-    public void slow_down_there_buckaroo() {
+    void slow_down_there_buckaroo() {
         long threadId = Thread.currentThread().getId();
         Flux<String> notifications = readNotifications()
                 .doOnNext(System.out::println)
