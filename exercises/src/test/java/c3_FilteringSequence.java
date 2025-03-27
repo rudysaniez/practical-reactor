@@ -19,20 +19,19 @@ import reactor.test.StepVerifier;
  *
  * @author Stefan Dragisic
  */
-public class c3_FilteringSequence extends FilteringSequenceBase {
+class c3_FilteringSequence extends FilteringSequenceBase {
 
     /**
      * Collect most popular girl names, no longer then 4 characters.
      */
     @Test
-    public void girls_are_made_of_sugar_and_spice() {
+    void girls_are_made_of_sugar_and_spice() {
         Flux<String> shortListed = popular_girl_names_service()
-                //todo: change this line only
-                ;
+            .filter(name -> name.length() < 5);
 
         StepVerifier.create(shortListed)
-                    .expectNext("Emma", "Ava", "Mia", "Luna", "Ella")
-                    .verifyComplete();
+            .expectNext("Emma", "Ava", "Mia", "Luna", "Ella")
+            .verifyComplete();
     }
 
     /**
@@ -40,29 +39,27 @@ public class c3_FilteringSequence extends FilteringSequenceBase {
      *  Without using `filter()` operator, collect only objects that are instance of `String`
      */
     @Test
-    public void needle_in_a_haystack() {
-        Flux<String> strings = null;
-        mashed_data_service()
-                //todo: change this line only
-                ;
+    void needle_in_a_haystack() {
+
+        Flux<String> strings = mashed_data_service()
+            .ofType(String.class);
 
         StepVerifier.create(strings)
-                    .expectNext("1", "String.class")
-                    .verifyComplete();
+            .expectNext("1", "String.class")
+            .verifyComplete();
     }
 
     /**
      * This service may return duplicated data. Filter out all the duplicates from the sequence.
      */
     @Test
-    public void economical() {
+    void economical() {
         Flux<String> items = duplicated_records_service()
-                //todo: change this line only, use only one operator
-                ;
+            .distinct();
 
         StepVerifier.create(items)
-                    .expectNext("1", "2", "3", "4", "5")
-                    .verifyComplete();
+            .expectNext("1", "2", "3", "4", "5")
+            .verifyComplete();
     }
 
     /**
@@ -72,58 +69,54 @@ public class c3_FilteringSequence extends FilteringSequenceBase {
      * This time no blocking. Use only one operator.
      */
     @Test
-    public void watch_out_for_the_spiders() {
-        //todo: change code as you need
-        Mono<String> firstResult = Mono.empty();
-        fragile_service();
+    void watch_out_for_the_spiders() {
+
+        Mono<String> firstResult = fragile_service().next();
 
         //don't change code below
         StepVerifier.create(firstResult)
-                    .expectNext("watch_out")
-                    .verifyComplete();
+            .expectNext("watch_out")
+            .verifyComplete();
     }
 
     /**
      * `number_service()` returns 300 numbers, but you only need first 100 numbers.
      */
     @Test
-    public void dont_take_more_then_you_need() {
-        Flux<Integer> numbers = number_service()
-                //todo: change this line only
-                ;
+    void dont_take_more_then_you_need() {
+        Flux<Integer> numbers = number_service().take(100);
 
         StepVerifier.create(numbers)
-                    .expectNextCount(100)
-                    .verifyComplete();
+            .expectNextCount(100)
+            .verifyComplete();
     }
 
     /**
      * `number_service()` returns 300 numbers, but you only need last 100 numbers.
      */
     @Test
-    public void not_a_binary_search() {
+    void not_a_binary_search() {
         Flux<Integer> numbers = number_service()
-                //todo: change this line only
-                ;
+            .skip(200);
 
         StepVerifier.create(numbers)
-                    .expectNextMatches(i -> i >= 200)
-                    .expectNextCount(99)
-                    .verifyComplete();
+            .expectNextMatches(i -> i >= 200)
+            .expectNextCount(99)
+            .verifyComplete();
     }
 
     /**
      * `number_service()` returns 300 numbers, but you only need 100 numbers, from the middle.
      */
     @Test
-    public void golden_middle() {
+    void golden_middle() {
         Flux<Integer> numbers = number_service()
-                //todo: do your changes here
-                ;
+            .skip(100)
+            .take(100);
 
         StepVerifier.create(numbers)
-                    .expectNextMatches(i -> i >= 100)
-                    .expectNextCount(99)
-                    .verifyComplete();
+            .expectNextMatches(i -> i >= 100)
+            .expectNextCount(99)
+            .verifyComplete();
     }
 }

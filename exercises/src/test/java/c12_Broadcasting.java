@@ -1,7 +1,11 @@
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.*;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Sinks;
+import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -23,17 +27,19 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *
  * @author Stefan Dragisic
  */
-public class c12_Broadcasting extends BroadcastingBase {
+class c12_Broadcasting extends BroadcastingBase {
 
     /**
      * Split incoming message stream into two streams, one contain user that sent message and second that contains
      * message payload.
      */
     @Test
-    public void sharing_is_caring() throws InterruptedException {
+    void sharing_is_caring() throws InterruptedException {
         Flux<Message> messages = messageStream()
-                //todo: do your changes here
-                ;
+            .publish()
+            .autoConnect(2)
+            .doOnRequest(x -> System.out.println("Request: " + x))
+            ;
 
         //don't change code below
         Flux<String> userStream = messages.map(m -> m.user);
@@ -50,6 +56,40 @@ public class c12_Broadcasting extends BroadcastingBase {
         Assertions.assertEquals(Arrays.asList("user#0", "user#1", "user#2", "user#3", "user#4"), metaData);
         Assertions.assertEquals(Arrays.asList("payload#0", "payload#1", "payload#2", "payload#3", "payload#4"),
                                 payload);
+
+        userStream.as(StepVerifier::create)
+            .expectTimeout(Duration.ofSeconds(5))
+            .verify();
+
+        System.out.println("---------------------------");
+
+        Sinks.Many<String> pub = Sinks.many().multicast().onBackpressureBuffer(100, false);
+        Flux<String> pubAsFlux = pub.asFlux()
+            .publish()
+            .autoConnect()
+            .doOnRequest(x -> System.out.println("Request: " + x));
+
+        var disposable = pubAsFlux
+            .delayElements(Duration.ofSeconds(1))
+            .subscribe(System.out::println);
+
+        pub.tryEmitNext("msg#1");
+        pub.tryEmitNext("msg#1");
+        pub.tryEmitNext("msg#1");
+        pub.tryEmitNext("msg#1");
+        pub.tryEmitNext("msg#1");
+        pub.tryEmitNext("msg#1");
+        pub.tryEmitComplete();
+
+        Awaitility.await().until(disposable::isDisposed);
+
+        System.out.println("---------------------------");
+
+        disposable = messageStream()
+            .doOnRequest(x -> System.out.println("Request: " + x))
+            .subscribe(x -> System.out.println("Data: " + x));
+
+        Awaitility.await().until(disposable::isDisposed);
     }
 
     /**
@@ -58,10 +98,10 @@ public class c12_Broadcasting extends BroadcastingBase {
      * Answer: What is the difference between hot and cold publisher? Why does won't .share() work in this case?
      */
     @Test
-    public void hot_vs_cold() {
+    void hot_vs_cold() {
         Flux<String> updates = systemUpdates()
-                //todo: do your changes here
-                ;
+            .publish()
+            .autoConnect();
 
         //subscriber 1
         StepVerifier.create(updates.take(3).doOnNext(n -> System.out.println("subscriber 1 got: " + n)))
@@ -80,10 +120,12 @@ public class c12_Broadcasting extends BroadcastingBase {
      * subscription.
      */
     @Test
-    public void history_lesson() {
+    void history_lesson() {
         Flux<String> updates = systemUpdates()
-                //todo: do your changes here
-                ;
+            .publish()
+            .autoConnect()
+            .cache(Duration.ofSeconds(20))
+            ;
 
         //subscriber 1
         StepVerifier.create(updates.take(3).doOnNext(n -> System.out.println("subscriber 1 got: " + n)))

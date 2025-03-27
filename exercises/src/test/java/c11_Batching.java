@@ -1,4 +1,5 @@
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
@@ -21,17 +22,16 @@ import java.time.Duration;
  *
  * @author Stefan Dragisic
  */
-public class c11_Batching extends BatchingBase {
+class c11_Batching extends BatchingBase {
 
     /**
      * To optimize disk writing, write data in batches of max 10 items, per batch.
      */
     @Test
-    public void batch_writer() {
-        //todo do your changes here
-        Flux<Void> dataStream = null;
-        dataStream();
-        writeToDisk(null);
+    void batch_writer() {
+        Flux<Void> dataStream = dataStream()
+            .buffer(10)
+            .concatMap(this::writeToDisk);
 
         //do not change the code below
         StepVerifier.create(dataStream)
@@ -48,11 +48,10 @@ public class c11_Batching extends BatchingBase {
      * Implement this behaviour by using `GroupedFlux`, and knowledge gained from the previous exercises.
      */
     @Test
-    public void command_gateway() {
-        //todo: implement your changes here
-        Flux<Void> processCommands = null;
-        inputCommandStream();
-        sendCommand(null);
+    void command_gateway() {
+        Flux<Void> processCommands = inputCommandStream()
+            .groupBy(Command::getAggregateId)
+            .flatMap(gf -> gf.concatMap(this::sendCommand));
 
         //do not change the code below
         Duration duration = StepVerifier.create(processCommands)
@@ -61,19 +60,20 @@ public class c11_Batching extends BatchingBase {
         Assertions.assertTrue(duration.getSeconds() <= 3, "Expected to complete in less than 3 seconds");
     }
 
-
     /**
      * You are implementing time-series database. You need to implement `sum over time` operator. Calculate sum of all
      * metric readings that have been published during one second.
      */
     @Test
-    public void sum_over_time() {
+    void sum_over_time() {
         Flux<Long> metrics = metrics()
-                //todo: implement your changes here
-                .take(10);
+            .window(Duration.ofSeconds(1))
+            .flatMap(dataFlux -> dataFlux.reduce((a, b) -> a + b))
+            .doOnNext(System.out::println)
+            .take(10);
 
         StepVerifier.create(metrics)
-                    .expectNext(45L, 165L, 255L, 396L, 465L, 627L, 675L, 858L, 885L, 1089L)
-                    .verifyComplete();
+            .expectNext(45L, 165L, 255L, 396L, 465L, 627L, 675L, 858L, 885L, 1089L)
+            .verifyComplete();
     }
 }

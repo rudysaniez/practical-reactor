@@ -1,3 +1,5 @@
+import org.awaitility.Awaitility;
+import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -35,7 +37,8 @@ public class ErrorHandlingBase {
 
     public Flux<String> messageNode() {
         return Flux.just("0x1", "0x2")
-                   .concatWith(Flux.error(new RuntimeException("Service shutdown unexpectedly!")));
+            .concatWith(Flux.error(new RuntimeException("Service shutdown unexpectedly!")))
+            .concatWith(Flux.just("0x4", "0x5"));
     }
 
     public Flux<String> backupMessageNode() {
@@ -56,13 +59,15 @@ public class ErrorHandlingBase {
 
     public Flux<Mono<String>> getFilesContent() {
         return Flux.just("file1.txt", "file2.txt", "file3.txt")
-                   .doOnNext(n -> System.out.println("Reading file: " + n))
-                   .map(n -> Mono.fromCallable(() -> {
-                       if (n.equals("file2.txt")) {
-                           throw new RuntimeException("file2.txt is broken");
-                       }
-                       return n + " content";
-                   })).doOnError(e -> System.out.println("Error reading file: " + e.getMessage()));
+           .doOnNext(n -> System.out.println("Reading file: " + n))
+           .map(n -> Mono.fromCallable(() -> {
+                   if (n.equals("file2.txt")) {
+                       throw new RuntimeException("file2.txt is broken");
+                   }
+                   return n + " content";
+                })
+               .doOnError(e -> System.out.println("Error reading file: " + e.getMessage()))
+           );
     }
 
     public Mono<Integer> temperatureSensor() {
@@ -84,6 +89,7 @@ public class ErrorHandlingBase {
             }
             System.out.println("Establishing connection...");
             if (gate.get()) {
+                System.out.println(" > Access granted !");
                 return "connection_established";
             } else {
                 if (!scheduled.get()) {
@@ -93,6 +99,26 @@ public class ErrorHandlingBase {
                 throw new RuntimeException("Sensor reading failed!");
             }
         });
+    }
+
+    public Mono<String> establishConnectionAnotherVersion(int timeToConnectionInSeconds) {
+        return Mono.fromCallable(() -> {
+                System.out.println("Establishing connection...");
+                if (gate.get()) {
+                    System.out.println(" > Connection established !");
+                    return "connection_established";
+                } else {
+                    if (!scheduled.get()) {
+                        scheduled.set(true);
+                        Flux.range(0, timeToConnectionInSeconds)
+                            .subscribeOn(Schedulers.fromExecutor(Executors.newSingleThreadExecutor()))
+                            .delayElements(Duration.ofSeconds(1))
+                            .doOnNext(i -> System.out.println(" > Connection in progress..."))
+                            .subscribe(i -> {}, e -> {}, () -> gate.set(true));
+                    }
+                    throw new RuntimeException("Sensor reading failed!");
+                }
+            });
     }
 
     public Mono<String> nodeAlerts() {

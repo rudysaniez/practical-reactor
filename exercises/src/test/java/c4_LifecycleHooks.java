@@ -1,6 +1,7 @@
 import org.junit.jupiter.api.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.SignalType;
 import reactor.test.StepVerifier;
 
 import java.util.Arrays;
@@ -26,23 +27,22 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * @author Stefan Dragisic
  */
-public class c4_LifecycleHooks extends LifecycleHooksBase {
+class c4_LifecycleHooks extends LifecycleHooksBase {
 
     /**
      * Add a hook that will execute when Flux `temperatureFlux` is subscribed too.
      * As a side effect hook should add string "subscribe" to `hooksTriggered` list.
      */
     @Test
-    public void no_subscription_no_gains() {
+    void no_subscription_no_gains() {
         CopyOnWriteArrayList<String> hooksTriggered = new CopyOnWriteArrayList<>();
 
         Flux<Integer> temperatureFlux = room_temperature_service()
-                //todo: change this line only
-                ;
+            .doOnSubscribe(s -> hooksTriggered.add("subscribe"));
 
         StepVerifier.create(temperatureFlux.take(5))
-                    .expectNextCount(5)
-                    .verifyComplete();
+            .expectNextCount(5)
+            .verifyComplete();
 
         Assertions.assertEquals(hooksTriggered, List.of("subscribe"));
     }
@@ -52,16 +52,15 @@ public class c4_LifecycleHooks extends LifecycleHooksBase {
      * string "before subscribe" to `hooksTriggered` list.
      */
     @Test
-    public void be_there_early() {
+    void be_there_early() {
         CopyOnWriteArrayList<String> hooksTriggered = new CopyOnWriteArrayList<>();
 
         Flux<Integer> temperatureFlux = room_temperature_service()
-                //todo: change this line only
-                ;
+            .doFirst(() -> hooksTriggered.add("before subscribe"));
 
         StepVerifier.create(temperatureFlux.take(5).doOnSubscribe(s -> hooksTriggered.add("subscribe")))
-                    .expectNextCount(5)
-                    .verifyComplete();
+            .expectNextCount(5)
+            .verifyComplete();
 
         Assertions.assertEquals(hooksTriggered, Arrays.asList("before subscribe", "subscribe"));
     }
@@ -71,16 +70,15 @@ public class c4_LifecycleHooks extends LifecycleHooksBase {
      * using `System.out` and increment `counter` value.
      */
     @Test
-    public void atomic_counter() {
+    void atomic_counter() {
         AtomicInteger counter = new AtomicInteger(0);
 
         Flux<Integer> temperatureFlux = room_temperature_service()
-                //todo: change this line only
-                ;
+            .doOnNext(s -> counter.incrementAndGet());
 
         StepVerifier.create(temperatureFlux)
-                    .expectNextCount(20)
-                    .verifyComplete();
+            .expectNextCount(20)
+            .verifyComplete();
 
         Assertions.assertEquals(counter.get(), 20);
     }
@@ -90,16 +88,15 @@ public class c4_LifecycleHooks extends LifecycleHooksBase {
      * `completed` flag to true.
      */
     @Test
-    public void successfully_executed() {
+    void successfully_executed() {
         AtomicBoolean completed = new AtomicBoolean(false);
 
         Flux<Integer> temperatureFlux = room_temperature_service()
-                //todo: change this line only
-                ;
+            .doOnComplete(() -> completed.set(true));
 
         StepVerifier.create(temperatureFlux.skip(20))
-                    .expectNextCount(0)
-                    .verifyComplete();
+            .expectNextCount(0)
+            .verifyComplete();
 
         Assertions.assertTrue(completed.get());
     }
@@ -109,16 +106,15 @@ public class c4_LifecycleHooks extends LifecycleHooksBase {
      * `canceled` flag to true.
      */
     @Test
-    public void need_to_cancel() {
+    void need_to_cancel() {
         AtomicBoolean canceled = new AtomicBoolean(false);
 
         Flux<Integer> temperatureFlux = room_temperature_service()
-                //todo: change this line only
-                ;
+            .doOnCancel(() -> canceled.set(true));
 
-        StepVerifier.create(temperatureFlux.take(0))
-                    .expectNextCount(0)
-                    .verifyComplete();
+        StepVerifier.create(temperatureFlux.take(1))
+            .expectNextCount(1)
+            .verifyComplete();
 
         Assertions.assertTrue(canceled.get());
     }
@@ -129,24 +125,26 @@ public class c4_LifecycleHooks extends LifecycleHooksBase {
      * Use only one operator.
      */
     @Test
-    public void terminator() {
+    void terminator() {
         AtomicInteger hooksTriggeredCounter = new AtomicInteger(0);
 
         Flux<Integer> temperatureFlux = room_temperature_service()
-                //todo: change this line only
-                ;
+            .doOnTerminate(hooksTriggeredCounter::incrementAndGet);
 
-        StepVerifier.create(temperatureFlux.take(0))
-                    .expectNextCount(0)
-                    .verifyComplete();
+        // The flux is canceled, so it isn't terminated (not terminated because it is canceled)
+        StepVerifier.create(temperatureFlux.take(1))
+            .expectNextCount(1)
+            .verifyComplete();
 
+        // The flux is completed, so it is terminated (terminated successfully)
         StepVerifier.create(temperatureFlux.skip(20))
-                    .expectNextCount(0)
-                    .verifyComplete();
+            .expectNextCount(0)
+            .verifyComplete();
 
+        // The flux is failed, but it is terminated (terminated with an error)
         StepVerifier.create(temperatureFlux.skip(20).concatWith(Flux.error(new RuntimeException("oops"))))
-                    .expectError()
-                    .verify();
+            .expectError()
+            .verify();
 
         Assertions.assertEquals(hooksTriggeredCounter.get(), 2);
     }
@@ -157,25 +155,30 @@ public class c4_LifecycleHooks extends LifecycleHooksBase {
      * Use only one operator!
      */
     @Test
-    public void one_to_catch_them_all() {
+    void one_to_catch_them_all() {
         AtomicInteger hooksTriggeredCounter = new AtomicInteger(0);
 
         Flux<Integer> temperatureFlux = room_temperature_service()
-                //todo: change this line only
-                ;
+            .doFinally(signalType-> {
+                if(signalType == SignalType.ON_COMPLETE
+                   || signalType == SignalType.ON_ERROR
+                   || signalType == SignalType.CANCEL) {
+                    hooksTriggeredCounter.incrementAndGet();
+                }
+            });
 
-        StepVerifier.create(temperatureFlux.take(0))
-                    .expectNextCount(0)
-                    .verifyComplete();
+        StepVerifier.create(temperatureFlux.take(1))
+            .expectNextCount(1)
+            .verifyComplete();
 
         StepVerifier.create(temperatureFlux.skip(20))
-                    .expectNextCount(0)
-                    .verifyComplete();
+            .expectNextCount(0)
+            .verifyComplete();
 
         StepVerifier.create(temperatureFlux.skip(20)
-                                           .concatWith(Flux.error(new RuntimeException("oops"))))
-                    .expectError()
-                    .verify();
+               .concatWith(Flux.error(new RuntimeException("oops"))))
+            .expectError()
+            .verify();
 
         Assertions.assertEquals(hooksTriggeredCounter.get(), 3);
     }
@@ -184,20 +187,19 @@ public class c4_LifecycleHooks extends LifecycleHooksBase {
      * Replace `to do` strings with "one" || "two" || "three" depending on order of `doFirst()` hook execution.
      */
     @Test
-    public void ordering_is_important() {
+    void ordering_is_important() {
         CopyOnWriteArrayList<String> sideEffects = new CopyOnWriteArrayList<>();
 
         Mono<Boolean> just = Mono.just(true)
-                                 .doFirst(() -> sideEffects.add("three"))
-                                 .doFirst(() -> sideEffects.add("two"))
-                                 .doFirst(() -> sideEffects.add("one"));
+             .doFirst(() -> sideEffects.add("three"))
+             .doFirst(() -> sideEffects.add("two"))
+             .doFirst(() -> sideEffects.add("one"));
 
-        List<String> orderOfExecution =
-                Arrays.asList("todo", "todo", "todo"); //todo: change this line only
+        List<String> orderOfExecution = Arrays.asList("one", "two", "three");
 
         StepVerifier.create(just)
-                    .expectNext(true)
-                    .verifyComplete();
+            .expectNext(true)
+            .verifyComplete();
 
         Assertions.assertEquals(sideEffects, orderOfExecution);
     }
@@ -213,16 +215,16 @@ public class c4_LifecycleHooks extends LifecycleHooksBase {
      * Bonus: Explore this operator's documentation, as it may be useful in the future.
      */
     @Test
-    public void one_to_rule_them_all() {
+    void one_to_rule_them_all() {
         CopyOnWriteArrayList<String> signals = new CopyOnWriteArrayList<>();
 
         Flux<Integer> flux = Flux.just(1, 2, 3)
-                //todo: change this line only
-                ;
+            .doOnNext(System.out::println)
+            .doOnEach(signal -> signals.add(signal.getType().name()));
 
         StepVerifier.create(flux)
-                    .expectNextCount(3)
-                    .verifyComplete();
+            .expectNextCount(3)
+            .verifyComplete();
 
         Assertions.assertEquals(signals, Arrays.asList("ON_NEXT", "ON_NEXT", "ON_NEXT", "ON_COMPLETE"));
     }

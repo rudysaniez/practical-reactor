@@ -1,8 +1,12 @@
 import org.junit.jupiter.api.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.test.StepVerifier;
+import reactor.util.retry.Retry;
 
+import java.time.Duration;
+import java.util.Random;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -23,7 +27,7 @@ import java.util.function.Function;
  *
  * @author Stefan Dragisic
  */
-public class c7_ErrorHandling extends ErrorHandlingBase {
+class c7_ErrorHandling extends ErrorHandlingBase {
 
     /**
      * You are monitoring hearth beat signal from space probe. Heart beat is sent every 1 second.
@@ -31,17 +35,16 @@ public class c7_ErrorHandling extends ErrorHandlingBase {
      * If error happens, save it in `errorRef`.
      */
     @Test
-    public void houston_we_have_a_problem() {
+    void houston_we_have_a_problem() {
         AtomicReference<Throwable> errorRef = new AtomicReference<>();
         Flux<String> heartBeat = probeHeartBeatSignal()
-                //todo: do your changes here
-                //todo: & here
-                ;
+            .timeout(Duration.ofSeconds(3))
+            .doOnError(errorRef::set);
 
         StepVerifier.create(heartBeat)
-                    .expectNextCount(3)
-                    .expectError(TimeoutException.class)
-                    .verify();
+            .expectNextCount(3)
+            .expectError(TimeoutException.class)
+            .verify();
 
         Assertions.assertTrue(errorRef.get() instanceof TimeoutException);
     }
@@ -52,11 +55,9 @@ public class c7_ErrorHandling extends ErrorHandlingBase {
      * Keep original cause.
      */
     @Test
-    public void potato_potato() {
+    void potato_potato() {
         Mono<String> currentUser = getCurrentUser()
-                //todo: change this line only
-                //use SecurityException
-                ;
+            .onErrorMap(SecurityException::new);
 
         StepVerifier.create(currentUser)
                     .expectErrorMatches(e -> e instanceof SecurityException &&
@@ -69,14 +70,13 @@ public class c7_ErrorHandling extends ErrorHandlingBase {
      * Ignore any failures, and if error happens finish consuming silently without propagating any error.
      */
     @Test
-    public void under_the_rug() {
-        Flux<String> messages = messageNode();
-        //todo: change this line only
-        ;
+    void under_the_rug() {
+        Flux<String> messages = messageNode()
+            .onErrorResume(t -> Mono.empty());
 
         StepVerifier.create(messages)
-                    .expectNext("0x1", "0x2")
-                    .verifyComplete();
+            .expectNext("0x1", "0x2")
+            .verifyComplete();
     }
 
     /**
@@ -84,16 +84,15 @@ public class c7_ErrorHandling extends ErrorHandlingBase {
      * use `backupMessageNode()` to consume the rest of the messages.
      */
     @Test
-    public void have_a_backup() {
-        //todo: feel free to change code as you need
-        Flux<String> messages = null;
-        messageNode();
-        backupMessageNode();
+    void have_a_backup() {
+        Flux<String> messages = messageNode()
+            .doOnError(System.out::println)
+            .onErrorResume(t -> backupMessageNode());
 
         //don't change below this line
         StepVerifier.create(messages)
-                    .expectNext("0x1", "0x2", "0x3", "0x4")
-                    .verifyComplete();
+            .expectNext("0x1", "0x2", "0x3", "0x4")
+            .verifyComplete();
     }
 
     /**
@@ -101,16 +100,17 @@ public class c7_ErrorHandling extends ErrorHandlingBase {
      * propagate error downstream.
      */
     @Test
-    public void error_reporter() {
-        //todo: feel free to change code as you need
-        Flux<String> messages = messageNode();
-        errorReportService(null);
+    void error_reporter() {
+        Flux<String> messages = messageNode()
+            .onErrorResume(t -> errorReportService(t)
+                .then(Mono.error(t))
+            );
 
         //don't change below this line
         StepVerifier.create(messages)
-                    .expectNext("0x1", "0x2")
-                    .expectError(RuntimeException.class)
-                    .verify();
+            .expectNext("0x1", "0x2")
+            .expectError(RuntimeException.class)
+            .verify();
         Assertions.assertTrue(errorReported.get());
     }
 
@@ -120,15 +120,18 @@ public class c7_ErrorHandling extends ErrorHandlingBase {
      * Do don't propagate any error downstream.
      */
     @Test
-    public void unit_of_work() {
+    void unit_of_work() {
         Flux<Task> taskFlux = taskQueue()
-                //todo: do your changes here
-                ;
+            .flatMap(task -> task.execute()
+                .then(task.commit())
+                .onErrorResume(task::rollback)
+                .thenReturn(task)
+            );
 
         StepVerifier.create(taskFlux)
-                    .expectNextMatches(task -> task.executedExceptionally.get() && !task.executedSuccessfully.get())
-                    .expectNextMatches(task -> task.executedSuccessfully.get() && task.executedSuccessfully.get())
-                    .verifyComplete();
+            .expectNextMatches(task -> task.executedExceptionally.get() && !task.executedSuccessfully.get())
+            .expectNextMatches(task -> task.executedSuccessfully.get() && task.executedSuccessfully.get())
+            .verifyComplete();
     }
 
     /**
@@ -137,15 +140,15 @@ public class c7_ErrorHandling extends ErrorHandlingBase {
      * Using `onErrorContinue()` skip corrupted file and get the content of the other files.
      */
     @Test
-    public void billion_dollar_mistake() {
+    void billion_dollar_mistake() {
         Flux<String> content = getFilesContent()
-                .flatMap(Function.identity())
-                //todo: change this line only
-                ;
+            .flatMap(Function.identity())
+            .onErrorContinue((t, o) -> System.out.println("Error reading file: " + t.getMessage()))
+            ;
 
         StepVerifier.create(content)
-                    .expectNext("file1.txt content", "file3.txt content")
-                    .verifyComplete();
+            .expectNext("file1.txt content", "file3.txt content")
+            .verifyComplete();
     }
 
     /**
@@ -161,15 +164,45 @@ public class c7_ErrorHandling extends ErrorHandlingBase {
      * by using knowledge gained from previous lessons.
      */
     @Test
-    public void resilience() {
-        //todo: change code as you need
+    void resilience() {
         Flux<String> content = getFilesContent()
-                .flatMap(Function.identity()); //start from here
+            .flatMap(fileMono -> fileMono
+                .doOnError(e -> System.out.println(" > Error reading file: " + e.getMessage()))
+                .onErrorResume(t -> Mono.empty())
+            );
 
         //don't change below this line
         StepVerifier.create(content)
-                    .expectNext("file1.txt content", "file3.txt content")
-                    .verifyComplete();
+            .expectNext("file1.txt content", "file3.txt content")
+            .verifyComplete();
+
+        // Another example
+        var contents = Flux.just("file1.txt", "file2.txt", "file3.txt", "file4.txt")
+            .subscribeOn(Schedulers.parallel())
+            .doOnNext(f -> {
+                var threadName = Thread.currentThread().getName();
+                System.out.println(" > file " + f + " read on " + threadName);
+            })
+            .map(fileName -> Mono.fromCallable( () -> {
+                    if(fileName.equals("file3.txt")) {
+                        throw new RuntimeException("file3.txt is broken");
+                    }
+                    return fileName.concat(" content");
+                })
+                .doFirst(() -> {
+                    var threadName = Thread.currentThread().getName();
+                    System.out.println(" > Begin publishing file: " + fileName + " read on " + threadName);
+                })
+                .delaySubscription(Duration.ofSeconds(new Random().nextInt(5)))
+                .doOnError(e -> System.out.println(" > Error reading file: " + e.getMessage()))
+                .onErrorResume(t -> Mono.empty())
+            )
+            .flatMapSequential(fileMono -> fileMono, 3);
+
+        //don't change below this line
+        StepVerifier.create(contents)
+            .expectNext("file1.txt content", "file2.txt content", "file4.txt content")
+            .verifyComplete();
     }
 
     /**
@@ -177,10 +210,9 @@ public class c7_ErrorHandling extends ErrorHandlingBase {
      * is cheaply made and may not return value on each read. Keep retrying until you get a valid value.
      */
     @Test
-    public void its_hot_in_here() {
+    void its_hot_in_here() {
         Mono<Integer> temperature = temperatureSensor()
-                //todo: change this line only
-                ;
+            .retry();
 
         StepVerifier.create(temperature)
                     .expectNext(34)
@@ -193,14 +225,13 @@ public class c7_ErrorHandling extends ErrorHandlingBase {
      * FIY: database is temporarily down, and it will be up in few seconds (5).
      */
     @Test
-    public void back_off() {
-        Mono<String> connection_result = establishConnection()
-                //todo: change this line only
-                ;
+    void back_off() {
+        Mono<String> connectionResult = establishConnectionAnotherVersion(5)
+            .retryWhen(Retry.backoff(3, Duration.ofSeconds(2)));
 
-        StepVerifier.create(connection_result)
-                    .expectNext("connection_established")
-                    .verifyComplete();
+        StepVerifier.create(connectionResult)
+            .expectNext("connection_established")
+            .verifyComplete();
     }
 
     /**
@@ -209,15 +240,14 @@ public class c7_ErrorHandling extends ErrorHandlingBase {
      * polling invocation by 1 second.
      */
     @Test
-    public void good_old_polling() {
-        //todo: change code as you need
-        Flux<String> alerts = null;
-        nodeAlerts();
+    void good_old_polling() {
+        Flux<String> alerts = nodeAlerts()
+            .repeatWhen(f -> f.delayElements(Duration.ofSeconds(1)));
 
         //don't change below this line
         StepVerifier.create(alerts.take(2))
-                    .expectNext("node1:low_disk_space", "node1:down")
-                    .verifyComplete();
+            .expectNext("node1:low_disk_space", "node1:down")
+            .verifyComplete();
     }
 
     public static class SecurityException extends Exception {

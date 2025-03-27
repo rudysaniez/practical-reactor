@@ -24,19 +24,21 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * @author Stefan Dragisic
  */
-public class c13_Context extends ContextBase {
+class c13_Context extends ContextBase {
 
     /**
      * You are writing a message handler that is executed by a framework (client). Framework attaches a http correlation
      * id to the Reactor context. Your task is to extract the correlation id and attach it to the message object.
      */
     public Mono<Message> messageHandler(String payload) {
-        //todo: do your changes withing this method
-        return Mono.just(new Message("set correlation_id from context here", payload));
+        return Mono.deferContextual(ctx -> {
+            String correlationId = ctx.get(HTTP_CORRELATION_ID);
+            return Mono.just(new Message(correlationId, payload));
+        });
     }
 
     @Test
-    public void message_tracker() {
+    void message_tracker() {
         //don't change this code
         Mono<Message> mono = messageHandler("Hello World!")
                 .contextWrite(Context.of(HTTP_CORRELATION_ID, "2-j3r9afaf92j-afkaf"));

@@ -37,18 +37,17 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  * @author Stefan Dragisic
  */
-public class c10_Backpressure extends BackpressureBase {
+class c10_Backpressure extends BackpressureBase {
 
     /**
      * In this exercise subscriber (test) will request several messages from the message stream.
      * Hook to the requests and record them to the `requests` list.
      */
     @Test
-    public void request_and_demand() {
+    void request_and_demand() {
         CopyOnWriteArrayList<Long> requests = new CopyOnWriteArrayList<>();
         Flux<String> messageStream = messageStream1()
-                //todo: change this line only
-                ;
+            .doOnRequest(requests::add);
 
         StepVerifier.create(messageStream, StepVerifierOptions.create().initialRequest(0))
                     .expectSubscription()
@@ -68,11 +67,11 @@ public class c10_Backpressure extends BackpressureBase {
      * same, but each request should be limited to 1 message.
      */
     @Test
-    public void limited_demand() {
+    void limited_demand() {
         CopyOnWriteArrayList<Long> requests = new CopyOnWriteArrayList<>();
         Flux<String> messageStream = messageStream2()
-                //todo: do your changes here
-                ;
+            .doOnRequest(requests::add)
+            .limitRate(1);
 
         StepVerifier.create(messageStream, StepVerifierOptions.create().initialRequest(0))
                     .expectSubscription()
@@ -92,21 +91,27 @@ public class c10_Backpressure extends BackpressureBase {
      * should respect the backpressure of the consumer.
      */
     @Test
-    public void uuid_generator() {
+    void uuid_generator() {
         Flux<UUID> uuidGenerator = Flux.create(sink -> {
-            //todo: do your changes here
+            sink.onRequest(request -> {
+                System.out.println("Requested: " + request);
+                for (int i = 0; i < request; i++) {
+                    sink.next(UUID.randomUUID());
+                }
+            });
+            sink.complete();
         });
 
         StepVerifier.create(uuidGenerator
-                                    .doOnNext(System.out::println)
-                                    .timeout(Duration.ofSeconds(1))
-                                    .onErrorResume(TimeoutException.class, e -> Flux.empty()),
-                            StepVerifierOptions.create().initialRequest(0))
-                    .expectSubscription()
-                    .thenRequest(10)
-                    .expectNextCount(10)
-                    .thenCancel()
-                    .verify();
+                            .doOnNext(System.out::println)
+                            .timeout(Duration.ofSeconds(1))
+                            .onErrorResume(TimeoutException.class, e -> Flux.empty()),
+                    StepVerifierOptions.create().initialRequest(0))
+            .expectSubscription()
+            .thenRequest(10)
+            .expectNextCount(10)
+            .thenCancel()
+            .verify();
     }
 
     /**
@@ -114,19 +119,18 @@ public class c10_Backpressure extends BackpressureBase {
      * In case that publisher produces more messages than subscriber is able to consume, raise an error.
      */
     @Test
-    public void pressure_is_too_much() {
+    void pressure_is_too_much() {
         Flux<String> messageStream = messageStream3()
-                //todo: change this line only
-                ;
+            .onBackpressureError();
 
         StepVerifier.create(messageStream, StepVerifierOptions.create()
-                                                              .initialRequest(0))
-                    .expectSubscription()
-                    .thenRequest(3)
-                    .then(() -> pub3.next("A", "B", "C", "D"))
-                    .expectNext("A", "B", "C")
-                    .expectErrorMatches(Exceptions::isOverflow)
-                    .verify();
+                                                      .initialRequest(0))
+            .expectSubscription()
+            .thenRequest(3)
+            .then(() -> pub3.next("A", "B", "C", "D"))
+            .expectNext("A", "B", "C")
+            .expectErrorMatches(Exceptions::isOverflow)
+            .verify();
     }
 
     /**
@@ -135,22 +139,21 @@ public class c10_Backpressure extends BackpressureBase {
      * error.
      */
     @Test
-    public void u_wont_brake_me() {
+    void u_wont_brake_me() {
         Flux<String> messageStream = messageStream4()
-                //todo: change this line only
-                ;
+            .onBackpressureBuffer(5);
 
         StepVerifier.create(messageStream, StepVerifierOptions.create()
-                                                              .initialRequest(0))
-                    .expectSubscription()
-                    .thenRequest(3)
-                    .then(() -> pub4.next("A", "B", "C", "D"))
-                    .expectNext("A", "B", "C")
-                    .then(() -> pub4.complete())
-                    .thenAwait()
-                    .thenRequest(1)
-                    .expectNext("D")
-                    .verifyComplete();
+                                                      .initialRequest(0))
+            .expectSubscription()
+                .thenRequest(3)
+                .then(() -> pub4.next("A", "B", "C", "D"))
+                .expectNext("A", "B", "C")
+                .then(() -> pub4.complete())
+                .thenAwait()
+                .thenRequest(1)
+                .expectNext("D")
+                .verifyComplete();
     }
 
     /**
@@ -162,7 +165,7 @@ public class c10_Backpressure extends BackpressureBase {
      * Producer respects backpressure.
      */
     @Test
-    public void subscriber() throws InterruptedException {
+    void subscriber() throws InterruptedException {
         AtomicReference<CountDownLatch> lockRef = new AtomicReference<>(new CountDownLatch(1));
         AtomicInteger count = new AtomicInteger(0);
         AtomicReference<Subscription> sub = new AtomicReference<>();
@@ -170,16 +173,19 @@ public class c10_Backpressure extends BackpressureBase {
         remoteMessageProducer()
                 .doOnCancel(() -> lockRef.get().countDown())
                 .subscribeWith(new BaseSubscriber<String>() {
-                    //todo: do your changes only within BaseSubscriber class implementation
                     @Override
                     protected void hookOnSubscribe(Subscription subscription) {
                         sub.set(subscription);
+                        subscription.request(10);
                     }
 
                     @Override
                     protected void hookOnNext(String s) {
                         System.out.println(s);
                         count.incrementAndGet();
+                        if(count.get() == 10) {
+                            sub.get().cancel();
+                        }
                     }
                     //-----------------------------------------------------
                 });
