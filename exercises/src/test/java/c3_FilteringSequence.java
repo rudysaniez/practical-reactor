@@ -1,18 +1,22 @@
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 /**
  * Sequence may produce many elements, but we are not always interested in all of them. In this chapter we will learn
  * how to filter elements from a sequence.
- *
+ * <p>
  * Read first:
- *
+ * <p>
  * https://projectreactor.io/docs/core/release/reference/#which.filtering
- *
+ * <p>
  * Useful documentation:
- *
+ * <p>
  * https://projectreactor.io/docs/core/release/reference/#which-operator
  * https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Mono.html
  * https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Flux.html
@@ -27,26 +31,55 @@ class c3_FilteringSequence extends FilteringSequenceBase {
     @Test
     void girls_are_made_of_sugar_and_spice() {
         Flux<String> shortListed = popular_girl_names_service()
-            .filter(name -> name.length() < 5);
+                .filter(name -> name.length() < 5);
 
         StepVerifier.create(shortListed)
-            .expectNext("Emma", "Ava", "Mia", "Luna", "Ella")
-            .verifyComplete();
+                .expectNext("Emma", "Ava", "Mia", "Luna", "Ella")
+                .verifyComplete();
+
+        var requests = new CopyOnWriteArrayList<Long>();
+
+        shortListed = popular_girl_names_service()
+                .doOnRequest(r -> {
+                    var t = Thread.currentThread();
+                    System.out.println("Request: " + r + ", T=" + t);
+                    requests.add(r);
+                })
+                .limitRate(1)
+                .publish()
+                .autoConnect()
+                .filterWhen(v -> Mono.defer(() -> {
+                    if (v.length() < 5) {
+                        return Mono.just(true);
+                    }
+                    return Mono.empty();
+                }));
+
+        StepVerifier.create(shortListed)
+                .expectNext("Emma", "Ava", "Mia", "Luna", "Ella")
+                .verifyComplete();
+
+        Assertions.assertEquals(List.of(1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L, 1L), requests);
+    }
+
+    @Override
+    public Flux<Object> mashed_data_service() {
+        return super.mashed_data_service();
     }
 
     /**
      * `mashed_data_service()` returns sequence of generic objects.
-     *  Without using `filter()` operator, collect only objects that are instance of `String`
+     * Without using `filter()` operator, collect only objects that are instance of `String`
      */
     @Test
     void needle_in_a_haystack() {
 
         Flux<String> strings = mashed_data_service()
-            .ofType(String.class);
+                .ofType(String.class);
 
         StepVerifier.create(strings)
-            .expectNext("1", "String.class")
-            .verifyComplete();
+                .expectNext("1", "String.class")
+                .verifyComplete();
     }
 
     /**
@@ -55,17 +88,27 @@ class c3_FilteringSequence extends FilteringSequenceBase {
     @Test
     void economical() {
         Flux<String> items = duplicated_records_service()
-            .distinct();
+                .distinct();
 
         StepVerifier.create(items)
-            .expectNext("1", "2", "3", "4", "5")
-            .verifyComplete();
+                .expectNext("1", "2", "3", "4", "5")
+                .verifyComplete();
+
+
+        generateMessage()
+                .doOnRequest(r -> {
+                    Thread t = Thread.currentThread();
+                    System.out.println("Request: " + r + ", T=" + t);
+                })
+                .limitRate(5, 1)
+                .distinct(Message::user);
+
     }
 
     /**
      * This service returns many elements, but you are only interested in the first one.
      * Also, service is very fragile, if you pull more than needed, you may brake it.
-     *
+     * <p>
      * This time no blocking. Use only one operator.
      */
     @Test
@@ -75,8 +118,8 @@ class c3_FilteringSequence extends FilteringSequenceBase {
 
         //don't change code below
         StepVerifier.create(firstResult)
-            .expectNext("watch_out")
-            .verifyComplete();
+                .expectNext("watch_out")
+                .verifyComplete();
     }
 
     /**
@@ -87,8 +130,8 @@ class c3_FilteringSequence extends FilteringSequenceBase {
         Flux<Integer> numbers = number_service().take(100);
 
         StepVerifier.create(numbers)
-            .expectNextCount(100)
-            .verifyComplete();
+                .expectNextCount(100)
+                .verifyComplete();
     }
 
     /**
@@ -97,12 +140,12 @@ class c3_FilteringSequence extends FilteringSequenceBase {
     @Test
     void not_a_binary_search() {
         Flux<Integer> numbers = number_service()
-            .skip(200);
+                .skip(200);
 
         StepVerifier.create(numbers)
-            .expectNextMatches(i -> i >= 200)
-            .expectNextCount(99)
-            .verifyComplete();
+                .expectNextMatches(i -> i >= 200)
+                .expectNextCount(99)
+                .verifyComplete();
     }
 
     /**
@@ -111,12 +154,12 @@ class c3_FilteringSequence extends FilteringSequenceBase {
     @Test
     void golden_middle() {
         Flux<Integer> numbers = number_service()
-            .skip(100)
-            .take(100);
+                .skip(100)
+                .take(100);
 
         StepVerifier.create(numbers)
-            .expectNextMatches(i -> i >= 100)
-            .expectNextCount(99)
-            .verifyComplete();
+                .expectNextMatches(i -> i >= 100)
+                .expectNextCount(99)
+                .verifyComplete();
     }
 }

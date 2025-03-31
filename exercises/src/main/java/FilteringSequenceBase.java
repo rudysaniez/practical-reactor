@@ -1,10 +1,12 @@
 import reactor.core.publisher.Flux;
 
+import java.time.Duration;
 import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author Stefan Dragisic
+ * @author rudysaniez
  */
 public class FilteringSequenceBase {
 
@@ -31,5 +33,14 @@ public class FilteringSequenceBase {
         return Flux.range(0,300);
     }
 
+    public Flux<Message> generateMessage() {
 
+        return Flux.range(0,100)
+            .doFirst(() -> System.out.println(" > Start generating messages"))
+            .delaySubscription(Duration.ofSeconds(1))
+            .map(i -> new Message("user#" + i, "payload#" + i))
+            .delayElements(Duration.ofMillis(100));
+    }
+
+    public record Message(String user, String payload) {}
 }
