@@ -12,11 +12,6 @@
 
     <artifactId>exercises</artifactId>
 
-    <properties>
-        <maven.compiler.source>23</maven.compiler.source>
-        <maven.compiler.target>23</maven.compiler.target>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>io.projectreactor</groupId>

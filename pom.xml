@@ -16,12 +16,18 @@
     <module>hint</module>
   </modules>
 
+  <properties>
+    <java.version>23</java.version>
+    <maven.compiler.source>${java.version}</maven.compiler.source>
+    <maven.compiler.target>${java.version}</maven.compiler.target>
+  </properties>
+
   <dependencyManagement>
     <dependencies>
       <dependency>
         <groupId>io.projectreactor</groupId>
         <artifactId>reactor-bom</artifactId>
-        <version>2024.0.4</version>
+        <version>2025.0.0-M2</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
